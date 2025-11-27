@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Download, CheckCircle, Circle } from 'lucide-react';
+import { CheckCircle, Circle } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import './App.css';
 
@@ -77,19 +77,12 @@ function App() {
         }
     };
 
-    const downloadPdf = () => {
-        window.open('http://localhost:8000/api/pdf', '_blank');
-    };
-
     if (loading) return <div className="loading">Loading Plan...</div>;
 
     return (
         <div className="container">
             <header className="header">
                 <h1>UPSC PLANNER</h1>
-                <button onClick={downloadPdf} className="btn-download">
-                    <Download size={16} /> Download PDF
-                </button>
             </header>
 
             <Dashboard stats={stats} schedule={schedule} />

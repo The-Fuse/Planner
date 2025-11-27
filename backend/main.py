@@ -1,8 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from scheduler import generate_schedule
-from pdf_generator import create_pdf
 from storage import load_progress, save_progress
 import os
 
@@ -65,12 +63,6 @@ def get_stats():
                     stats[subj]["completed"] += 1
                     
     return stats
-
-@app.get("/api/pdf")
-def download_pdf():
-    filename = "study_plan.pdf"
-    create_pdf(schedule_cache, filename)
-    return FileResponse(filename, filename=filename)
 
 if __name__ == "__main__":
     import uvicorn
