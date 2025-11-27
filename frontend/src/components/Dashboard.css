@@ -2,6 +2,12 @@
     margin-bottom: 60px;
 }
 
+@media (max-width: 768px) {
+    .dashboard-container {
+        margin-bottom: 32px;
+    }
+}
+
 .todays-focus {
     background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
     color: #ffffff;
@@ -11,6 +17,14 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     position: relative;
     overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    .todays-focus {
+        padding: 20px;
+        margin-bottom: 32px;
+        border-radius: 8px;
+    }
 }
 
 .todays-focus::before {
@@ -35,10 +49,26 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+@media (max-width: 768px) {
+    .todays-focus h2 {
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        padding-bottom: 12px;
+        margin-bottom: 16px;
+    }
+}
+
 .focus-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 16px;
+}
+
+@media (max-width: 768px) {
+    .focus-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
 }
 
 .focus-card {
@@ -52,6 +82,13 @@
     gap: 12px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
+}
+
+@media (max-width: 768px) {
+    .focus-card {
+        padding: 16px;
+        gap: 10px;
+    }
 }
 
 .focus-card::after {
@@ -98,6 +135,12 @@
     letter-spacing: -0.4px;
 }
 
+@media (max-width: 768px) {
+    .focus-subject {
+        font-size: 16px;
+    }
+}
+
 .focus-slot-name {
     font-size: 9px;
     color: rgba(255, 255, 255, 0.3);
@@ -112,6 +155,13 @@
     color: rgba(255, 255, 255, 0.8);
     flex: 1;
     font-weight: 400;
+}
+
+@media (max-width: 768px) {
+    .focus-task {
+        font-size: 13px;
+        line-height: 1.5;
+    }
 }
 
 .focus-status {
@@ -134,6 +184,13 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
+@media (max-width: 768px) {
+    .dashboard {
+        padding: 20px;
+        border-radius: 8px;
+    }
+}
+
 .dashboard h2 {
     margin-top: 0;
     font-size: 14px;
@@ -146,10 +203,26 @@
     color: #737373;
 }
 
+@media (max-width: 768px) {
+    .dashboard h2 {
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        padding-bottom: 12px;
+        margin-bottom: 16px;
+    }
+}
+
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 16px;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
 }
 
 .stat-card {
@@ -158,6 +231,12 @@
     background: #fafafa;
     border-radius: 8px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 768px) {
+    .stat-card {
+        padding: 16px;
+    }
 }
 
 .stat-card:hover {
@@ -186,6 +265,12 @@
     font-weight: 300;
     letter-spacing: -1px;
     color: #0a0a0a;
+}
+
+@media (max-width: 768px) {
+    .stat-percentage {
+        font-size: 20px;
+    }
 }
 
 .progress-bar-bg {
