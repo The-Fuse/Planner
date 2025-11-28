@@ -34,8 +34,8 @@ function App() {
     const fetchData = async () => {
         try {
             const [planRes, statsRes] = await Promise.all([
-                axios.get('http://localhost:8000/api/plan'),
-                axios.get('http://localhost:8000/api/stats')
+                axios.get('https://planner-936q.onrender.com/api/plan'),
+                axios.get('https://planner-936q.onrender.com/api/stats')
             ]);
             setSchedule(planRes.data);
             setStats(statsRes.data);
@@ -92,7 +92,7 @@ function App() {
 
     const toggleComplete = async (date: string, slotName: string, currentStatus: boolean) => {
         try {
-            await axios.post('http://localhost:8000/api/mark', null, {
+            await axios.post('https://planner-936q.onrender.com/api/mark', null, {
                 params: { date, slot_name: slotName, completed: !currentStatus }
             });
 
@@ -111,7 +111,7 @@ function App() {
                 return day;
             }));
 
-            const statsRes = await axios.get('http://localhost:8000/api/stats');
+            const statsRes = await axios.get('https://planner-936q.onrender.com/api/stats');
             setStats(statsRes.data);
 
         } catch (err) {
