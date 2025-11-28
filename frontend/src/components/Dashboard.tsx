@@ -50,27 +50,6 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, schedule }) => {
 
     return (
         <div className="dashboard-container">
-            {todayPlan && (
-                <div className="todays-focus">
-                    <h2>Today's Focus</h2>
-                    <div className="focus-grid">
-                        {todayPlan.slots.map((slot, idx) => (
-                            <div key={idx} className={`focus-card ${slot.completed ? 'completed' : ''}`}>
-                                <div className="focus-header">
-                                    <span className="focus-subject">{slot.subject}</span>
-                                    <span className="focus-slot-name">{slot.name}</span>
-                                </div>
-                                <div className="focus-task">{slot.task}</div>
-                                <div className="focus-status">
-                                    {slot.completed ? <CheckCircle size={18} /> : <Circle size={18} />}
-                                    <span>{slot.completed ? 'Completed' : 'Pending'}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             <div className="dashboard">
                 <h2>Overall Progress</h2>
                 <div className="stats-grid">
