@@ -1,85 +1,49 @@
 # Deployment Notes for Render.com
 
-## Data Persistence Fix
+## Data Persistence Fix (Free Tier)
 
-This application now uses SQLite database instead of JSON files for storing task completion status. This ensures data persists across server restarts.
+This application supports both **SQLite** (local development) and **PostgreSQL** (production). 
+Since Render.com's persistent disk is a paid feature, we recommend using a **free external PostgreSQL database** like **Neon.tech**.
 
-## Render.com Configuration
+## Setup Instructions
 
-### Option 1: Using Persistent Disk (Recommended)
+### 1. Get a Free PostgreSQL Database
 
-1. **Add a Persistent Disk** to your Render service:
-   - Go to your service dashboard on Render.com
-   - Navigate to "Disks" section
-   - Click "Add Disk"
-   - Set mount path: `/opt/render/project/data`
-   - Set size: 1GB (minimum needed)
-   - Save changes
+1. Go to [Neon.tech](https://neon.tech) and sign up (it's free).
+2. Create a new project.
+3. Copy the **Connection String** (it looks like `postgres://user:password@host/dbname?sslmode=require`).
 
-2. **Redeploy** your service after adding the disk
+### 2. Configure Render.com
 
-3. The application will automatically use the persistent disk path for the database
+1. Go to your Render.com dashboard and select your service.
+2. Navigate to **Environment**.
+3. Add a new Environment Variable:
+   - **Key**: `DATABASE_URL`
+   - **Value**: (Paste your Neon connection string here)
+4. Save changes. Render will automatically redeploy.
 
-### Option 2: Using Environment Variable (Alternative)
+### 3. Verify
 
-If you prefer a different path for the database:
+1. After deployment, the application will detect the `DATABASE_URL` and switch to PostgreSQL mode.
+2. Mark a task as complete.
+3. Restart the server (or wait for it to sleep).
+4. Verify the task remains completed.
 
-1. Add an environment variable in Render.com:
-   - Key: `DATABASE_PATH`
-   - Value: `/path/to/your/persistent/disk/progress.db`
+## Local Development
 
-2. Ensure the path points to a persistent disk mount
+For local development, simply run the app as usual. It will automatically fallback to using `progress.db` (SQLite) if no `DATABASE_URL` is present.
 
-### Local Development
+## Migration
 
-For local development, the application automatically falls back to using `progress.db` in the current directory. No configuration needed.
-
-## Migration from Old Deployment
-
-If you have an existing deployment with `progress.json`:
-
-1. The application will automatically migrate data from `progress.json` to the SQLite database on first run
-2. After successful migration, you can safely delete the old `progress.json` file
-3. The migration only happens once (when the database is empty)
-
-## Verification
-
-After deployment:
-
-1. Mark a few tasks as complete
-2. Manually restart your service (or wait for automatic restart)
-3. Check that completed tasks remain marked as complete
-4. You should see a `progress.db` file in your persistent disk location
+- **Note**: Data from `progress.json` or local `progress.db` is **NOT** automatically migrated to the remote PostgreSQL database. You start fresh on production.
+- If you need to migrate data, you would need to manually run a script to insert data into the remote database.
 
 ## Troubleshooting
 
-### Database file not persisting
+### Connection Errors
+- Ensure the `DATABASE_URL` is correct and includes `sslmode=require` (Neon usually adds this by default).
+- Check Render logs for "Failed to connect to PostgreSQL" messages.
 
-- Verify the persistent disk is properly mounted at `/opt/render/project/data`
-- Check Render logs for any database-related errors
-- Ensure the disk has write permissions
-
-### Migration not working
-
-- Check if `progress.json` exists in the backend directory
-- Look for migration messages in the server logs
-- Manually verify the database using SQLite browser tools if needed
-
-## Database Schema
-
-The SQLite database has a simple schema:
-
-```sql
-CREATE TABLE progress (
-    key TEXT PRIMARY KEY,      -- Format: "YYYY-MM-DD_SlotName"
-    completed INTEGER NOT NULL -- 1 for completed, 0 for not completed
-)
-```
-
-## Backup Recommendations
-
-Since the database is stored on a persistent disk:
-
-1. Render.com automatically backs up persistent disks
-2. For additional safety, consider periodic exports of the database
-3. You can query the database directly using SQLite tools if needed
+### Data Not Persisting
+- Verify `DATABASE_URL` is set in Environment variables.
+- If not set, the app falls back to SQLite in the ephemeral file system (which loses data on restart).

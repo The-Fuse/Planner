@@ -1,32 +1,56 @@
 import sqlite3
 import json
 import os
+import sys
 
-# Database path - use persistent disk path on Render.com if available
+# Check for DATABASE_URL environment variable (provided by Render/Neon)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+# Database path for SQLite (fallback)
 DB_PATH = os.environ.get('DATABASE_PATH', '/opt/render/project/data/progress.db')
-
-# Fallback to local path if Render path doesn't exist (for local development)
 if not os.path.exists(os.path.dirname(DB_PATH)):
     DB_PATH = "progress.db"
 
+def get_db_connection():
+    """Get database connection based on configuration"""
+    if DATABASE_URL:
+        import psycopg2
+        try:
+            conn = psycopg2.connect(DATABASE_URL)
+            return conn, "postgres"
+        except Exception as e:
+            print(f"Failed to connect to PostgreSQL: {e}")
+            # Fallback to SQLite if Postgres fails? Better to raise error in production
+            # but for now let's print and re-raise
+            raise e
+    else:
+        conn = sqlite3.connect(DB_PATH)
+        return conn, "sqlite"
+
 def init_db():
     """Initialize the database and create tables if they don't exist"""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    # Create progress table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS progress (
-            key TEXT PRIMARY KEY,
-            completed INTEGER NOT NULL
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
-    
-    # Migrate from old progress.json if it exists
-    migrate_from_json()
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Create progress table
+        # Syntax is compatible with both SQLite and PostgreSQL
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS progress (
+                key VARCHAR(255) PRIMARY KEY,
+                completed INTEGER NOT NULL
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
+        
+        # Migrate from old progress.json if it exists (only for SQLite local usually)
+        if db_type == "sqlite":
+            migrate_from_json()
+            
+    except Exception as e:
+        print(f"Database initialization error: {e}")
 
 def migrate_from_json():
     """Migrate data from old progress.json file if it exists"""
@@ -36,7 +60,6 @@ def migrate_from_json():
             with open(old_file, "r") as f:
                 old_data = json.load(f)
             
-            # Only migrate if database is empty
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             cursor.execute('SELECT COUNT(*) FROM progress')
@@ -59,7 +82,7 @@ def migrate_from_json():
 def load_progress():
     """Load all progress data from database"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn, db_type = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute('SELECT key, completed FROM progress')
@@ -69,26 +92,33 @@ def load_progress():
         
         # Convert to dictionary with boolean values
         return {key: bool(completed) for key, completed in rows}
-    except sqlite3.Error as e:
+    except Exception as e:
         print(f"Database error in load_progress: {e}")
         return {}
 
 def save_progress(data):
     """Save progress data to database"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn, db_type = get_db_connection()
         cursor = conn.cursor()
         
         # Clear existing data and insert new data
+        # Note: In a real production app, we might want to UPSERT instead of DELETE ALL
+        # but for this simple app, this is fine and ensures consistency
         cursor.execute('DELETE FROM progress')
         
+        # Prepare query based on DB type
+        if db_type == "postgres":
+            placeholder = "%s"
+        else:
+            placeholder = "?"
+            
+        query = f'INSERT INTO progress (key, completed) VALUES ({placeholder}, {placeholder})'
+        
         for key, completed in data.items():
-            cursor.execute(
-                'INSERT INTO progress (key, completed) VALUES (?, ?)',
-                (key, 1 if completed else 0)
-            )
+            cursor.execute(query, (key, 1 if completed else 0))
         
         conn.commit()
         conn.close()
-    except sqlite3.Error as e:
+    except Exception as e:
         print(f"Database error in save_progress: {e}")
