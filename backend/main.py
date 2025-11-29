@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from scheduler import generate_schedule
-from storage import load_progress, save_progress
+from storage import load_progress, save_progress, init_db
 import os
 
 app = FastAPI()
@@ -13,6 +13,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize database
+init_db()
 
 # Load persistent status
 completion_status = load_progress()
