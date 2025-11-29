@@ -22,6 +22,24 @@ interface SubjectStats {
     completed: number;
 }
 
+const QUOTES = [
+    "The secret of getting ahead is getting started.",
+    "It always seems impossible until it's done.",
+    "Don't watch the clock; do what it does. Keep going.",
+    "The future depends on what you do today.",
+    "Success is the sum of small efforts, repeated day in and day out.",
+    "Believe you can and you're halfway there.",
+    "Your limitation—it's only your imagination.",
+    "Push yourself, because no one else is going to do it for you.",
+    "Great things never come from comfort zones.",
+    "Dream it. Wish it. Do it."
+];
+
+function getQuoteForToday() {
+    const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
+    return QUOTES[dayOfYear % QUOTES.length];
+}
+
 function App() {
     const [schedule, setSchedule] = useState<DayPlan[]>([]);
     const [stats, setStats] = useState<{ [key: string]: SubjectStats }>({});
@@ -153,7 +171,18 @@ function App() {
                                         <span className="today-num">{todayPlan.date.split('-')[2]}</span>
                                         <span className="today-month">{new Date(todayPlan.date).toLocaleString('default', { month: 'short' }).toUpperCase()}</span>
                                     </div>
-                                    <div className="today-day">{todayPlan.day.toUpperCase()}</div>
+                                    <div className="today-right-col">
+                                        <div className="today-day">{todayPlan.day.toUpperCase()}</div>
+                                        <div className="quote-box">
+                                            "{getQuoteForToday()}"
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="today-progress-container">
+                                    <div
+                                        className="today-progress-bar"
+                                        style={{ width: `${(todayPlan.slots.filter(s => s.completed).length / todayPlan.slots.length) * 100}%` }}
+                                    ></div>
                                 </div>
                                 <div className="today-slots">
                                     {todayPlan.slots.map((slot) => (
@@ -187,13 +216,21 @@ function App() {
                             </div>
                             <div className="backlog-scroll">
                                 {backlog.map((item, idx) => (
-                                    <div key={`${item.date}-${idx}`} className="card backlog-card" onClick={() => toggleComplete(item.date, item.slot.name, item.slot.completed)}>
+                                    <div key={`${item.date}-${idx}`} className="card backlog-card">
                                         <div className="card-top">
                                             <span className="card-date">{item.date.split('-').slice(1).join('/')}</span>
                                             <span className="card-subject">{item.slot.subject}</span>
                                         </div>
                                         <div className="card-task">{item.slot.task}</div>
-                                        <div className="card-action">MARK DONE</div>
+                                        <div
+                                            className="card-action"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleComplete(item.date, item.slot.name, item.slot.completed);
+                                            }}
+                                        >
+                                            MARK DONE
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -243,7 +280,7 @@ function App() {
                     <h2 className="section-title">COMPLETED TASKS</h2>
                     <div className="history-list">
                         {history.map((item, idx) => (
-                            <div key={`${item.date}-${idx}`} className="history-row" onClick={() => toggleComplete(item.date, item.slot.name, item.slot.completed)}>
+                            <div key={`${item.date}-${idx}`} className="history-row">
                                 <div className="h-date-col">
                                     <span className="h-date">{item.date}</span>
                                 </div>
@@ -251,7 +288,15 @@ function App() {
                                     <span className="h-subject">{item.slot.subject}</span>
                                     <span className="h-task">{item.slot.task}</span>
                                 </div>
-                                <div className="h-action">UNDO</div>
+                                <div
+                                    className="h-action"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleComplete(item.date, item.slot.name, item.slot.completed);
+                                    }}
+                                >
+                                    UNDO
+                                </div>
                             </div>
                         ))}
                         {history.length === 0 && <div className="empty-state">NO HISTORY YET</div>}

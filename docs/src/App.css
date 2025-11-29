@@ -104,6 +104,8 @@ body {
   gap: 16px;
   overflow-x: auto;
   padding-bottom: 16px;
+  padding-top: 8px;
+  /* Fix hover border cut-off */
   scrollbar-width: none;
 }
 
@@ -148,14 +150,20 @@ body {
 
 .card-action {
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   text-align: right;
-  color: var(--gray-400);
+  color: var(--fg);
+  cursor: pointer;
+  padding: 8px 0;
+  transition: opacity 0.2s;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
-.backlog-card:hover .card-action {
-  color: var(--fg);
+.card-action:hover {
+  opacity: 0.7;
 }
+
 
 /* TODAY */
 .today-section {
@@ -170,43 +178,83 @@ body {
 }
 
 .today-header {
-  padding: 40px 32px 32px;
+  padding: 24px 32px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
+  position: relative;
+}
+
+.today-progress-container {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  width: 100%;
+}
+
+.today-progress-bar {
+  height: 100%;
+  background: #ffffff;
+  transition: width 0.5s ease-out;
+}
+
+.today-right-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  text-align: right;
+}
+
+.quote-box {
+  max-width: 280px;
+  font-family: 'Georgia', serif;
+  font-size: 15px;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  border: none;
+  padding: 0;
+  margin: 0;
 }
 
 .today-date-box {
   display: flex;
-  flex-direction: column;
+  align-items: baseline;
+  gap: 8px;
 }
 
 .today-num {
-  font-size: 72px;
-  font-weight: 300;
-  line-height: 1;
+  font-size: 80px;
+  font-weight: 200;
+  line-height: 0.8;
   letter-spacing: -0.04em;
-  color: var(--bg);
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
 }
 
 .today-month {
-  font-size: 14px;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.6);
-  margin-top: 6px;
-  letter-spacing: 0.1em;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  margin: 0;
 }
 
 .today-day {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--fg);
-  background: var(--bg);
-  padding: 6px 14px;
-  border-radius: 99px;
+  color: rgba(255, 255, 255, 0.5);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
 }
 
 .today-slots {
@@ -219,7 +267,7 @@ body {
   padding: 28px 32px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
   gap: 24px;
   align-items: flex-start;
 }
@@ -229,7 +277,8 @@ body {
 }
 
 .slot-row:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(4px);
 }
 
 .slot-check-col {
@@ -241,29 +290,30 @@ body {
   height: 18px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .slot-row:hover .checkbox {
-  border-color: rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.8);
+  transform: scale(1.1);
 }
 
 .checkbox.checked {
   background: var(--bg);
   border-color: var(--bg);
-  position: relative;
+  transform: scale(1.1);
 }
 
 .checkbox.checked::after {
   content: '';
-  position: absolute;
-  left: 5px;
-  top: 2px;
   width: 4px;
   height: 8px;
   border: solid var(--fg);
   border-width: 0 1.5px 1.5px 0;
-  transform: rotate(45deg);
+  transform: rotate(45deg) translateY(-1px);
 }
 
 .slot-content {
@@ -300,6 +350,8 @@ body {
   gap: 16px;
   overflow-x: auto;
   padding-bottom: 16px;
+  padding-top: 8px;
+  /* Fix hover border cut-off */
   scrollbar-width: none;
 }
 
@@ -458,14 +510,25 @@ body {
 
 .h-action {
   font-size: 11px;
-  font-weight: 500;
-  color: var(--gray-400);
+  font-weight: 600;
+  color: var(--fg);
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
+  cursor: pointer;
+  padding: 8px 0;
+  margin-left: 16px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  padding-right: 24px;
 }
 
 .history-row:hover .h-action {
   opacity: 1;
+}
+
+.h-action:hover {
+  opacity: 0.7;
+  background: none;
 }
 
 .empty-state {
