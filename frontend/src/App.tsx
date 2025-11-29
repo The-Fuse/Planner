@@ -70,6 +70,8 @@ function App() {
     const [todayPlan, setTodayPlan] = useState<DayPlan | null>(null);
     const [upcoming, setUpcoming] = useState<DayPlan[]>([]);
 
+    const [loadingTask, setLoadingTask] = useState<string | null>(null);
+
     const todayStr = new Date().toISOString().split('T')[0];
 
     useEffect(() => {
@@ -109,6 +111,10 @@ function App() {
     }, [schedule, todayStr]);
 
     const toggleComplete = async (date: string, slotName: string, currentStatus: boolean) => {
+        const taskId = `${date}-${slotName}`;
+        if (loadingTask === taskId) return; // Prevent double clicks
+
+        setLoadingTask(taskId);
         try {
             await axios.post('https://planner-936q.onrender.com/api/mark', null, {
                 params: { date, slot_name: slotName, completed: !currentStatus }
@@ -134,6 +140,8 @@ function App() {
 
         } catch (err) {
             console.error(err);
+        } finally {
+            setLoadingTask(null);
         }
     };
 
@@ -185,20 +193,28 @@ function App() {
                                     ></div>
                                 </div>
                                 <div className="today-slots">
-                                    {todayPlan.slots.map((slot) => (
-                                        <div key={slot.name} className={`slot-row ${slot.completed ? 'completed' : ''}`} onClick={() => toggleComplete(todayPlan!.date, slot.name, slot.completed)}>
-                                            <div className="slot-check-col">
-                                                <div className={`checkbox ${slot.completed ? 'checked' : ''}`}></div>
-                                            </div>
-                                            <div className="slot-content">
-                                                <div className="slot-meta">
-                                                    <span className="slot-time">{slot.name}</span>
-                                                    <span className="slot-subj">{slot.subject}</span>
+                                    {todayPlan.slots.map((slot) => {
+                                        const taskId = `${todayPlan.date}-${slot.name}`;
+                                        const isLoading = loadingTask === taskId;
+                                        return (
+                                            <div key={slot.name} className={`slot-row ${slot.completed ? 'completed' : ''}`} onClick={() => toggleComplete(todayPlan!.date, slot.name, slot.completed)}>
+                                                <div className="slot-check-col">
+                                                    {isLoading ? (
+                                                        <div className="spinner-sm"></div>
+                                                    ) : (
+                                                        <div className={`checkbox ${slot.completed ? 'checked' : ''}`}></div>
+                                                    )}
                                                 </div>
-                                                <div className="slot-desc">{slot.task}</div>
+                                                <div className="slot-content">
+                                                    <div className="slot-meta">
+                                                        <span className="slot-time">{slot.name}</span>
+                                                        <span className="slot-subj">{slot.subject}</span>
+                                                    </div>
+                                                    <div className="slot-desc">{slot.task}</div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
@@ -215,24 +231,28 @@ function App() {
                                 <span className="badge">{backlog.length}</span>
                             </div>
                             <div className="backlog-scroll">
-                                {backlog.map((item, idx) => (
-                                    <div key={`${item.date}-${idx}`} className="card backlog-card">
-                                        <div className="card-top">
-                                            <span className="card-date">{item.date.split('-').slice(1).join('/')}</span>
-                                            <span className="card-subject">{item.slot.subject}</span>
+                                {backlog.map((item, idx) => {
+                                    const taskId = `${item.date}-${item.slot.name}`;
+                                    const isLoading = loadingTask === taskId;
+                                    return (
+                                        <div key={`${item.date}-${idx}`} className="card backlog-card">
+                                            <div className="card-top">
+                                                <span className="card-date">{item.date.split('-').slice(1).join('/')}</span>
+                                                <span className="card-subject">{item.slot.subject}</span>
+                                            </div>
+                                            <div className="card-task">{item.slot.task}</div>
+                                            <div
+                                                className="card-action"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleComplete(item.date, item.slot.name, item.slot.completed);
+                                                }}
+                                            >
+                                                {isLoading ? <div className="spinner-xs"></div> : "MARK DONE"}
+                                            </div>
                                         </div>
-                                        <div className="card-task">{item.slot.task}</div>
-                                        <div
-                                            className="card-action"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleComplete(item.date, item.slot.name, item.slot.completed);
-                                            }}
-                                        >
-                                            MARK DONE
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -257,6 +277,10 @@ function App() {
                                                 className={`u-slot-item ${slot.completed ? 'completed' : ''}`}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    // Optional: Allow completing future tasks? User didn't explicitly ask, but good for consistency.
+                                                    // But wait, toggleComplete is defined in scope.
+                                                    // Let's just keep it as is, but maybe add loading here too if they click it?
+                                                    // The original code had onClick.
                                                     toggleComplete(day.date, slot.name, slot.completed);
                                                 }}
                                             >
@@ -279,26 +303,30 @@ function App() {
                 <div className="view-history">
                     <h2 className="section-title">COMPLETED TASKS</h2>
                     <div className="history-list">
-                        {history.map((item, idx) => (
-                            <div key={`${item.date}-${idx}`} className="history-row">
-                                <div className="h-date-col">
-                                    <span className="h-date">{item.date}</span>
+                        {history.map((item, idx) => {
+                            const taskId = `${item.date}-${item.slot.name}`;
+                            const isLoading = loadingTask === taskId;
+                            return (
+                                <div key={`${item.date}-${idx}`} className="history-row">
+                                    <div className="h-date-col">
+                                        <span className="h-date">{item.date}</span>
+                                    </div>
+                                    <div className="h-content">
+                                        <span className="h-subject">{item.slot.subject}</span>
+                                        <span className="h-task">{item.slot.task}</span>
+                                    </div>
+                                    <div
+                                        className="h-action"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleComplete(item.date, item.slot.name, item.slot.completed);
+                                        }}
+                                    >
+                                        {isLoading ? <div className="spinner-xs dark"></div> : "UNDO"}
+                                    </div>
                                 </div>
-                                <div className="h-content">
-                                    <span className="h-subject">{item.slot.subject}</span>
-                                    <span className="h-task">{item.slot.task}</span>
-                                </div>
-                                <div
-                                    className="h-action"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleComplete(item.date, item.slot.name, item.slot.completed);
-                                    }}
-                                >
-                                    UNDO
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                         {history.length === 0 && <div className="empty-state">NO HISTORY YET</div>}
                     </div>
                 </div>
