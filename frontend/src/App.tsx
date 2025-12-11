@@ -45,6 +45,19 @@ function App() {
     const [stats, setStats] = useState<{ [key: string]: SubjectStats }>({});
     const [loading, setLoading] = useState(true);
 
+    // Calculate days until exam (May 24, 2026)
+    const calculateDaysUntilExam = () => {
+        const examDate = new Date('2026-05-24');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        examDate.setHours(0, 0, 0, 0);
+        const diffTime = examDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays;
+    };
+
+    const daysUntilExam = calculateDaysUntilExam();
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -172,7 +185,13 @@ function App() {
                     {/* TODAY SECTION - MOVED TO TOP */}
                     {todayPlan && (
                         <div className="section today-section">
-                            <h2 className="section-title">TODAY'S MISSION</h2>
+                            <div className="today-section-header">
+                                <h2 className="section-title">TODAY'S MISSION</h2>
+                                <div className="exam-countdown">
+                                    <span className="exam-countdown-number">{daysUntilExam}</span>
+                                    <span className="exam-countdown-text">days until exam</span>
+                                </div>
+                            </div>
                             <div className="today-card-container">
                                 <div className="today-header">
                                     <div className="today-date-box">

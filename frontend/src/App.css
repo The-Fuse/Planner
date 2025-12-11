@@ -170,6 +170,36 @@ body {
   margin-bottom: 60px !important;
 }
 
+.today-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 24px;
+}
+
+.exam-countdown {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.exam-countdown-number {
+  font-size: 32px;
+  font-weight: 200;
+  letter-spacing: -0.04em;
+  color: var(--fg);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.exam-countdown-text {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--gray-400);
+  padding-bottom: 4px;
+}
+
 .today-card-container {
   background: var(--fg);
   color: var(--bg);
