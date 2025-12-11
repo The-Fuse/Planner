@@ -185,13 +185,7 @@ function App() {
                     {/* TODAY SECTION - MOVED TO TOP */}
                     {todayPlan && (
                         <div className="section today-section">
-                            <div className="today-section-header">
-                                <h2 className="section-title">TODAY'S MISSION</h2>
-                                <div className="exam-countdown">
-                                    <span className="exam-countdown-number">{daysUntilExam}</span>
-                                    <span className="exam-countdown-text">days until exam</span>
-                                </div>
-                            </div>
+                            <h2 className="section-title">TODAY'S MISSION</h2>
                             <div className="today-card-container">
                                 <div className="today-header">
                                     <div className="today-date-box">
@@ -199,6 +193,9 @@ function App() {
                                         <span className="today-month">{new Date(todayPlan.date).toLocaleString('default', { month: 'short' }).toUpperCase()}</span>
                                     </div>
                                     <div className="today-right-col">
+                                        <div className="today-countdown">
+                                            EXAM IN <span className="today-countdown-num">{daysUntilExam}</span> DAYS
+                                        </div>
                                         <div className="today-day">{todayPlan.day.toUpperCase()}</div>
                                         <div className="quote-box">
                                             "{getQuoteForToday()}"

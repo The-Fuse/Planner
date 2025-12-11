@@ -170,36 +170,6 @@ body {
   margin-bottom: 60px !important;
 }
 
-.today-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 24px;
-}
-
-.exam-countdown {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.exam-countdown-number {
-  font-size: 32px;
-  font-weight: 200;
-  letter-spacing: -0.04em;
-  color: var(--fg);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.exam-countdown-text {
-  font-size: 10px;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  color: var(--gray-400);
-  padding-bottom: 4px;
-}
-
 .today-card-container {
   background: var(--fg);
   color: var(--bg);
@@ -234,6 +204,22 @@ body {
   align-items: flex-end;
   gap: 8px;
   text-align: right;
+}
+
+.today-countdown {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 8px;
+  border-radius: 0;
+  margin-bottom: 4px;
+}
+
+.today-countdown-num {
+  font-weight: 700;
+  color: #ffffff;
 }
 
 .quote-box {
