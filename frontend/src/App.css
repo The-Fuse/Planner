@@ -170,11 +170,49 @@ body {
   margin-bottom: 60px !important;
 }
 
+.today-section .section-title {
+  margin-bottom: 0px;
+  line-height: 1;
+  /* Remove extra height from line spacing */
+  padding-bottom: 4px;
+  /* Optional: adjust if too tight, but user wants NO space */
+  padding-bottom: 0;
+}
+
+/* New Tab Layout */
+.today-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 0;
+}
+
+.today-countdown-tab {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--gray-400);
+  /* Dimmed dark text */
+  background: var(--gray-100);
+  /* Light background */
+  padding: 6px 16px;
+  margin-bottom: 0;
+  line-height: 1;
+}
+
+.today-countdown-num-tab {
+  font-weight: 700;
+  color: var(--fg);
+  /* Dark number */
+}
+
 .today-card-container {
   background: var(--fg);
   color: var(--bg);
   border: none;
   overflow: hidden;
+  width: 100%;
+  /* Ensure card takes full width */
 }
 
 .today-header {

@@ -185,7 +185,12 @@ function App() {
                     {/* TODAY SECTION - MOVED TO TOP */}
                     {todayPlan && (
                         <div className="section today-section">
-                            <h2 className="section-title">TODAY'S MISSION</h2>
+                            <div className="today-top-bar">
+                                <h2 className="section-title">TODAY'S MISSION</h2>
+                                <div className="today-countdown-tab">
+                                    EXAM IN <span className="today-countdown-num-tab">{daysUntilExam}</span> DAYS
+                                </div>
+                            </div>
                             <div className="today-card-container">
                                 <div className="today-header">
                                     <div className="today-date-box">
@@ -193,9 +198,6 @@ function App() {
                                         <span className="today-month">{new Date(todayPlan.date).toLocaleString('default', { month: 'short' }).toUpperCase()}</span>
                                     </div>
                                     <div className="today-right-col">
-                                        <div className="today-countdown">
-                                            EXAM IN <span className="today-countdown-num">{daysUntilExam}</span> DAYS
-                                        </div>
                                         <div className="today-day">{todayPlan.day.toUpperCase()}</div>
                                         <div className="quote-box">
                                             "{getQuoteForToday()}"
@@ -313,41 +315,44 @@ function App() {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
-            {view === 'history' && (
-                <div className="view-history">
-                    <h2 className="section-title">COMPLETED TASKS</h2>
-                    <div className="history-list">
-                        {history.map((item, idx) => {
-                            const taskId = `${item.date}-${item.slot.name}`;
-                            const isLoading = loadingTask === taskId;
-                            return (
-                                <div key={`${item.date}-${idx}`} className="history-row">
-                                    <div className="h-date-col">
-                                        <span className="h-date">{item.date}</span>
+            {
+                view === 'history' && (
+                    <div className="view-history">
+                        <h2 className="section-title">COMPLETED TASKS</h2>
+                        <div className="history-list">
+                            {history.map((item, idx) => {
+                                const taskId = `${item.date}-${item.slot.name}`;
+                                const isLoading = loadingTask === taskId;
+                                return (
+                                    <div key={`${item.date}-${idx}`} className="history-row">
+                                        <div className="h-date-col">
+                                            <span className="h-date">{item.date}</span>
+                                        </div>
+                                        <div className="h-content">
+                                            <span className="h-subject">{item.slot.subject}</span>
+                                            <span className="h-task">{item.slot.task}</span>
+                                        </div>
+                                        <div
+                                            className="h-action"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleComplete(item.date, item.slot.name, item.slot.completed);
+                                            }}
+                                        >
+                                            {isLoading ? <div className="spinner-xs dark"></div> : "UNDO"}
+                                        </div>
                                     </div>
-                                    <div className="h-content">
-                                        <span className="h-subject">{item.slot.subject}</span>
-                                        <span className="h-task">{item.slot.task}</span>
-                                    </div>
-                                    <div
-                                        className="h-action"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleComplete(item.date, item.slot.name, item.slot.completed);
-                                        }}
-                                    >
-                                        {isLoading ? <div className="spinner-xs dark"></div> : "UNDO"}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                        {history.length === 0 && <div className="empty-state">NO HISTORY YET</div>}
+                                );
+                            })}
+                            {history.length === 0 && <div className="empty-state">NO HISTORY YET</div>}
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
 
