@@ -98,9 +98,9 @@ function App() {
                 if (day.date < todayStr) {
                     // Past Day
                     day.slots.forEach(slot => {
-                        if (!slot.completed) {
+                        if (!slot.completed && slot.task !== 'Revision') {
                             bl.push({ slot, date: day.date });
-                        } else {
+                        } else if (slot.completed) {
                             hist.push({ slot, date: day.date });
                         }
                     });
