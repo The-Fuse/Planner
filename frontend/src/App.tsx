@@ -180,9 +180,6 @@ function App() {
         }
     };
 
-    const [touchStart, setTouchStart] = useState<number | null>(null);
-    const [touchEnd, setTouchEnd] = useState<number | null>(null);
-
     // Theme state - initialize from localStorage for instant loading
     const [theme, setTheme] = useState<'light' | 'dark'>(() => {
         const savedTheme = localStorage.getItem('theme');
@@ -213,41 +210,6 @@ function App() {
         };
         fetchTheme();
     }, []);
-
-    // Minimum swipe distance
-    const minSwipeDistance = 50;
-
-    const onTouchStart = (e: React.TouchEvent) => {
-        setTouchEnd(null); // Reset
-
-        // Check if touch started on a scrollable container
-        const target = e.target as HTMLElement;
-        const isScrollableContainer = target.closest('.upcoming-scroll, .backlog-scroll');
-
-        if (isScrollableContainer) {
-            setTouchStart(null); // Don't track swipes in scrollable areas
-        } else {
-            setTouchStart(e.targetTouches[0].clientX);
-        }
-    };
-
-    const onTouchMove = (e: React.TouchEvent) => {
-        setTouchEnd(e.targetTouches[0].clientX);
-    };
-
-    const onTouchEnd = () => {
-        if (!touchStart || !touchEnd) return;
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
-
-        if (isLeftSwipe && view === 'focus') {
-            setView('history');
-        }
-        if (isRightSwipe && view === 'history') {
-            setView('focus');
-        }
-    };
 
     const toggleTheme = async () => {
         const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -283,12 +245,7 @@ function App() {
     if (loading) return <div className="loading">LOADING</div>;
 
     return (
-        <div
-            className={`container ${theme}`}
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-        >
+        <div className={`container ${theme}`}>
             <header className="header">
                 <div className="logo">UPSC PLANNER</div>
                 <div className="header-right">
