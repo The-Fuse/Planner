@@ -396,7 +396,7 @@ function App() {
                         <div className="section upcoming-section">
                             <div className="section-header">
                                 <h2 className="section-title">UPCOMING</h2>
-                                <span className="badge">{upcoming.reduce((acc, curr) => acc + curr.slots.length, 0)} slots</span>
+                                <span className="badge">{upcoming.length} {upcoming.length === 1 ? 'DAY' : 'DAYS'}</span>
                             </div>
                             <div className="upcoming-scroll">
                                 {upcoming.map((dayPlan) => {
