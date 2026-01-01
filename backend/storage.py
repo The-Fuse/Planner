@@ -14,15 +14,23 @@ if not os.path.exists(os.path.dirname(DB_PATH)):
 def get_db_connection():
     """Get database connection based on configuration"""
     if DATABASE_URL:
-        import psycopg2
+        try:
+            import psycopg2
+        except ImportError:
+            print("ERROR: psycopg2 not installed! Install with: pip install psycopg2-binary")
+            print("Falling back to SQLite (data will not persist on Render!)")
+            conn = sqlite3.connect(DB_PATH)
+            return conn, "sqlite"
+
         try:
             conn = psycopg2.connect(DATABASE_URL)
+            print("Successfully connected to PostgreSQL database")
             return conn, "postgres"
         except Exception as e:
             print(f"Failed to connect to PostgreSQL: {e}")
-            # Fallback to SQLite if Postgres fails? Better to raise error in production
-            # but for now let's print and re-raise
-            raise e
+            print("Falling back to SQLite (data will not persist on Render!)")
+            conn = sqlite3.connect(DB_PATH)
+            return conn, "sqlite"
     else:
         conn = sqlite3.connect(DB_PATH)
         return conn, "sqlite"
@@ -32,7 +40,9 @@ def init_db():
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
-        
+
+        print(f"Initializing database (type: {db_type})...")
+
         # Create progress table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS progress (
@@ -48,16 +58,20 @@ def init_db():
                 value TEXT
             )
         ''')
-        
+
         conn.commit()
         conn.close()
-        
+
+        print(f"Database initialized successfully (type: {db_type})")
+
         # Migrate from old progress.json if it exists (only for SQLite local usually)
         if db_type == "sqlite":
             migrate_from_json()
-            
+
     except Exception as e:
         print(f"Database initialization error: {e}")
+        import traceback
+        traceback.print_exc()
 
 def migrate_from_json():
     """Migrate data from old progress.json file if it exists"""
@@ -91,16 +105,20 @@ def load_progress():
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
-        
+
         cursor.execute('SELECT key, completed FROM progress')
         rows = cursor.fetchall()
-        
+
         conn.close()
-        
+
         # Convert to dictionary with boolean values
-        return {key: bool(completed) for key, completed in rows}
+        progress_data = {key: bool(completed) for key, completed in rows}
+        print(f"Loaded {len(progress_data)} completion records from database (type: {db_type})")
+        return progress_data
     except Exception as e:
         print(f"Database error in load_progress: {e}")
+        import traceback
+        traceback.print_exc()
         return {}
 
 def save_progress(data):
@@ -108,27 +126,30 @@ def save_progress(data):
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
-        
+
         # Clear existing data and insert new data
         # Note: In a real production app, we might want to UPSERT instead of DELETE ALL
         # but for this simple app, this is fine and ensures consistency
         cursor.execute('DELETE FROM progress')
-        
+
         # Prepare query based on DB type
         if db_type == "postgres":
             placeholder = "%s"
         else:
             placeholder = "?"
-            
+
         query = f'INSERT INTO progress (key, completed) VALUES ({placeholder}, {placeholder})'
-        
+
         for key, completed in data.items():
             cursor.execute(query, (key, 1 if completed else 0))
-        
+
         conn.commit()
         conn.close()
+        print(f"Saved {len(data)} completion records to database (type: {db_type})")
     except Exception as e:
         print(f"Database error in save_progress: {e}")
+        import traceback
+        traceback.print_exc()
 
 def get_preference(key, default=None):
     """Get a preference value by key"""
