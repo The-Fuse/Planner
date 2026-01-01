@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { CheckCircle, Circle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Moon, Sun, Check, RefreshCw, AlertCircle } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import './App.css';
+
+const API_BASE_URL = 'https://planner-936q.onrender.com';
 
 interface Slot {
     name: string;
@@ -23,35 +25,35 @@ interface SubjectStats {
 }
 
 const QUOTES = [
-    "The simple path is silence and hard work.",
-    "Do not pray for an easy life, pray for the strength to endure a difficult one.",
-    "We suffer more often in imagination than in reality.",
-    "The impediment to action advances action. What stands in the way becomes the way.",
-    "He who has a why to live for can bear almost any how.",
-    "Discipline is doing what you hate to do, but doing it like you love it.",
-    "It is not death that a man should fear, but he should fear never beginning to live.",
-    "The only easy day was yesterday.",
-    "Pain is temporary. Quitting lasts forever.",
-    "You have power over your mind - not outside events. Realize this, and you will find strength.",
-    "Suffer the pain of discipline, or suffer the pain of regret.",
+    "The simple path forward is silence and consistent hard work.",
+    "Pray for strength to endure, not for an easy life.",
+    "We suffer more often in imagination than we do in reality.",
+    "What stands in the way becomes the way. Obstacles advance action.",
+    "He who has a why can bear almost any how.",
+    "Discipline is doing what you hate like you love it.",
+    "Fear never beginning to live, not the end of life.",
+    "The only easy day was yesterday. Today demands more.",
+    "Pain is temporary. The regret of quitting lasts forever.",
+    "You control your mind, not outside events. This is your strength.",
+    "Choose discipline today or suffer the pain of regret tomorrow.",
     "Your future is created by what you do today, not tomorrow.",
-    "Success doesn't come from what you do occasionally, it comes from what you do consistently.",
-    "Focus on the process, not the outcome.",
-    "The man who moves a mountain begins by carrying away small stones.",
-    "Be so good they can't ignore you.",
-    "Victory is reserved for those who are willing to pay its price.",
-    "A river cuts through rock, not because of its power, but because of its persistence.",
-    "Don't stop when you're tired. Stop when you're done.",
-    "Amateurs sit and wait for inspiration, the rest of us just get up and go to work.",
-    "If you want something you've never had, you must be willing to do something you've never done.",
-    "Your time is limited, so don't waste it living someone else's life.",
-    "Obsession beats talent every time.",
-    "Stay hungry. Stay foolish.",
-    "The gap between your dreams and reality is called action.",
-    "Rule your mind or it will rule you.",
-    "Civilize the mind but make savage the body.",
-    "Comfort is a drug. Once you get used to it, it becomes addicting.",
-    "To be a champion, I think you have to see the big picture. It's not about winning and losing; it's about every day hard work.",
+    "Success comes from consistency, not from occasional bursts of effort.",
+    "Focus on the process, not the outcome. Trust the journey.",
+    "Moving mountains begins by carrying away one small stone at a time.",
+    "Be so good they can't ignore you. Excellence speaks volumes.",
+    "Victory is reserved for those willing to pay its price.",
+    "Rivers cut through rock by persistence, not by power alone.",
+    "Don't stop when you're tired. Stop only when you're done.",
+    "Professionals get up and work. Amateurs wait for inspiration to strike.",
+    "Want something new? Do something you've never done before.",
+    "Your time is limited. Don't waste it living someone else's life.",
+    "Obsession beats talent every single time. Stay obsessed with your goals.",
+    "Stay hungry. Stay foolish. Never settle for comfortable mediocrity.",
+    "The gap between dreams and reality is called action. Bridge it.",
+    "Rule your mind or it will rule you. Choose wisely.",
+    "Civilize the mind but make savage the body through discipline.",
+    "Comfort is addicting. Break free or it will hold you forever.",
+    "Champions see the big picture: it's about every day hard work.",
     "It's going to be hard, but hard does not mean impossible."
 ];
 
@@ -85,8 +87,8 @@ function App() {
     const fetchData = async () => {
         try {
             const [planRes, statsRes] = await Promise.all([
-                axios.get('https://planner-936q.onrender.com/api/plan'),
-                axios.get('https://planner-936q.onrender.com/api/stats')
+                axios.get(`${API_BASE_URL}/api/plan`),
+                axios.get(`${API_BASE_URL}/api/stats`)
             ]);
             setSchedule(planRes.data);
             setStats(statsRes.data);
@@ -149,7 +151,7 @@ function App() {
 
         setLoadingTask(taskId);
         try {
-            await axios.post('https://planner-936q.onrender.com/api/mark', null, {
+            await axios.post(`${API_BASE_URL}/api/mark`, null, {
                 params: { date, slot_name: slotName, completed: !currentStatus }
             });
 
@@ -168,7 +170,7 @@ function App() {
                 return day;
             }));
 
-            const statsRes = await axios.get('https://planner-936q.onrender.com/api/stats');
+            const statsRes = await axios.get(`${API_BASE_URL}/api/stats`);
             setStats(statsRes.data);
 
         } catch (err) {
@@ -178,53 +180,172 @@ function App() {
         }
     };
 
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+    // Theme state - initialize from localStorage for instant loading
+    const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+        const savedTheme = localStorage.getItem('theme');
+        return (savedTheme === 'dark' || savedTheme === 'light') ? savedTheme : 'light';
+    });
+
+    // Apply theme immediately on mount (logic moved out of effect for initial render)
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        // Save to localStorage whenever theme changes
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    // Fetch theme preference from backend to sync (only once on mount)
+    useEffect(() => {
+        const fetchTheme = async () => {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/api/preferences/theme`);
+                if (response.data && response.data.value) {
+                    const backendTheme = response.data.value;
+                    if ((backendTheme === 'light' || backendTheme === 'dark') && backendTheme !== theme) {
+                        setTheme(backendTheme);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to sync theme preference", error);
+            }
+        };
+        fetchTheme();
+    }, []);
+
+    // Minimum swipe distance
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null); // Reset
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe && view === 'focus') {
+            setView('history');
+        }
+        if (isRightSwipe && view === 'history') {
+            setView('focus');
+        }
+    };
+
+    const toggleTheme = async () => {
+        const newTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme); // Immediate UI update
+
+        try {
+            await axios.post(`${API_BASE_URL}/api/preferences`, {
+                key: 'theme',
+                value: newTheme
+            });
+        } catch (error) {
+            console.error("Failed to save theme preference", error);
+        }
+    };
+
+    // Calculate Subject Progress
+    const getSubjectProgress = () => {
+        // Fallback progress if stats not loaded or empty
+        if (!stats) return [
+            { name: 'Polity', completed: 0, total: 100, percent: 0 },
+            { name: 'History', completed: 0, total: 100, percent: 0 }
+        ];
+
+        return Object.keys(stats).map(subj => {
+            const s = stats[subj];
+            const percent = s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0;
+            return { name: subj, completed: s.completed, total: s.total, percent };
+        });
+    };
+
+    const subjectProgress = getSubjectProgress();
+
     if (loading) return <div className="loading">LOADING</div>;
 
     return (
-        <div className="container">
+        <div
+            className={`container ${theme}`}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+        >
             <header className="header">
                 <div className="logo">UPSC PLANNER</div>
-                <nav className="nav-toggle">
-                    <button
-                        className={`nav-btn ${view === 'focus' ? 'active' : ''}`}
-                        onClick={() => setView('focus')}
-                    >
-                        FOCUS
+                <div className="header-right">
+                    <nav className="nav-toggle">
+                        <button
+                            className={`nav-btn ${view === 'focus' ? 'active' : ''}`}
+                            onClick={() => setView('focus')}
+                        >
+                            FOCUS
+                        </button>
+                        <button
+                            className={`nav-btn ${view === 'history' ? 'active' : ''}`}
+                            onClick={() => setView('history')}
+                        >
+                            HISTORY
+                        </button>
+                    </nav>
+                    <button className="theme-toggle" onClick={toggleTheme}>
+                        {theme === 'light' ? (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                        ) : (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                        )}
                     </button>
-                    <button
-                        className={`nav-btn ${view === 'history' ? 'active' : ''}`}
-                        onClick={() => setView('history')}
-                    >
-                        HISTORY
-                    </button>
-                </nav>
+                </div>
             </header>
 
             {view === 'focus' && (
                 <div className="view-focus">
-                    {/* TODAY SECTION - MOVED TO TOP */}
+                    {/* SUBJECT PROGRESS - COMPACT TOP */}
+                    <div className="subject-progress-compact">
+                        {subjectProgress.map(s => (
+                            <div key={s.name} className="subj-prog-item">
+                                <div className="subj-meta-top">
+                                    <span className="subj-name">{s.name}</span>
+                                    <span className="subj-val">{s.percent}% ({s.completed}/{s.total})</span>
+                                </div>
+                                <div className="subj-bar"><div className="subj-fill" style={{ width: `${s.percent}%` }}></div></div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* TODAY SECTION */}
                     {todayPlan && (
                         <div className="section today-section">
-                            <div className="today-top-bar">
+                            {/* UNIFIED HEADER STYLE */}
+                            <div className="section-header">
                                 <h2 className="section-title">TODAY'S MISSION</h2>
-                                <div className="today-countdown-tab">
-                                    EXAM IN <span className="today-countdown-num-tab">{daysUntilExam}</span> DAYS
-                                </div>
+                                <span className="badge">{daysUntilExam} DAYS LEFT</span>
                             </div>
                             <div className="today-card-container">
                                 <div className="today-header">
                                     <div className="today-date-box">
                                         <span className="today-num">{todayPlan.date.split('-')[2]}</span>
-                                        <span className="today-month">{new Date(todayPlan.date).toLocaleString('default', { month: 'short' }).toUpperCase()}</span>
+                                        <div className="today-month-row">
+                                            <span className="today-month">{new Date(todayPlan.date).toLocaleString('default', { month: 'short' })}</span>
+                                        </div>
                                     </div>
                                     <div className="today-right-col">
-                                        <div className="today-day">{todayPlan.day.toUpperCase()}</div>
+                                        <span className="today-day">{todayPlan.day}</span>
                                         <div className="quote-box">
                                             "{getQuoteForToday()}"
                                         </div>
                                     </div>
                                 </div>
-                                <div className="today-progress-container">
+                                <div className="today-progress-container-internal">
                                     <div
                                         className="today-progress-bar"
                                         style={{ width: `${(todayPlan.slots.filter(s => s.completed).length / todayPlan.slots.length) * 100}%` }}
@@ -259,7 +380,7 @@ function App() {
                     )}
 
                     {/* DASHBOARD STATS */}
-                    <Dashboard stats={stats} schedule={schedule} />
+
 
                     {/* BACKLOG SECTION */}
                     {backlog.length > 0 && (
@@ -275,18 +396,26 @@ function App() {
                                     return (
                                         <div key={`${item.date}-${idx}`} className="card backlog-card">
                                             <div className="card-top">
-                                                <span className="card-date">{item.date.split('-').slice(1).join('/')}</span>
+                                                <span className="card-date">{item.date.split('-')[2]} {new Date(item.date).toLocaleString('default', { month: 'short' })}</span>
                                                 <span className="card-subject">{item.slot.subject}</span>
                                             </div>
-                                            <div className="card-task">{item.slot.task}</div>
-                                            <div
-                                                className="card-action"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleComplete(item.date, item.slot.name, item.slot.completed);
-                                                }}
-                                            >
-                                                {isLoading ? <div className="spinner-xs"></div> : "MARK DONE"}
+
+                                            {/* PROGRESS BAR SEPARATOR */}
+                                            <div className="b-progress-container-internal">
+                                                <div className="b-progress-bar" style={{ width: '0%' }}></div>
+                                            </div>
+
+                                            <div className="card-bottom">
+                                                <div className="card-task">{item.slot.task}</div>
+                                                <div
+                                                    className="card-action"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleComplete(item.date, item.slot.name, item.slot.completed);
+                                                    }}
+                                                >
+                                                    {isLoading ? <div className="spinner-xs"></div> : "MARK DONE"}
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -296,81 +425,94 @@ function App() {
                     )}
 
                     {/* UPCOMING SECTION */}
-                    <div className="section upcoming-section">
-                        <div className="section-header">
-                            <h2 className="section-title">UPCOMING</h2>
-                            <span className="badge">{upcoming.length} DAYS</span>
-                        </div>
-                        <div className="upcoming-scroll">
-                            {upcoming.map((day) => (
-                                <div key={day.date} className="upcoming-card">
-                                    <div className="u-header">
-                                        <span className="u-date">{day.date.split('-')[2]} {new Date(day.date).toLocaleString('default', { month: 'short' }).toUpperCase()}</span>
-                                        <span className="u-day">{day.day.slice(0, 3).toUpperCase()}</span>
-                                    </div>
-                                    <div className="u-slots">
-                                        {day.slots.map((slot) => (
-                                            <div
-                                                key={slot.name}
-                                                className={`u-slot-item ${slot.completed ? 'completed' : ''}`}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    // Optional: Allow completing future tasks? User didn't explicitly ask, but good for consistency.
-                                                    // But wait, toggleComplete is defined in scope.
-                                                    // Let's just keep it as is, but maybe add loading here too if they click it?
-                                                    // The original code had onClick.
-                                                    toggleComplete(day.date, slot.name, slot.completed);
-                                                }}
-                                            >
-                                                <div className={`u-checkbox ${slot.completed ? 'checked' : ''}`}></div>
-                                                <div className="u-slot-content">
-                                                    <div className="u-slot-subj">{slot.subject}</div>
-                                                    <div className="u-slot-task">{slot.task}</div>
+                    {/* UPCOMING SECTION */}
+                    {upcoming.length > 0 && (
+                        <div className="section upcoming-section">
+                            <div className="section-header">
+                                <h2 className="section-title">UPCOMING</h2>
+                                <span className="badge">{upcoming.reduce((acc, curr) => acc + curr.slots.length, 0)} slots</span>
+                            </div>
+                            <div className="upcoming-scroll">
+                                {upcoming.map((dayPlan) => {
+                                    const totalSlots = dayPlan.slots.length;
+                                    const completedSlots = dayPlan.slots.filter(s => s.completed).length;
+                                    const progressPercent = totalSlots > 0 ? (completedSlots / totalSlots) * 100 : 0;
+
+                                    return (
+                                        <div key={dayPlan.date} className="upcoming-card">
+                                            <div className="u-header">
+                                                <div className="u-date-group">
+                                                    <span className="u-date">{dayPlan.date.split('-')[2]} {new Date(dayPlan.date).toLocaleString('default', { month: 'short' })}</span>
                                                 </div>
+                                                <span className="u-day">{dayPlan.day}</span>
                                             </div>
-                                        ))}
+
+                                            {/* PROGRESS BAR SEPARATOR */}
+                                            <div className="u-progress-container-internal">
+                                                <div
+                                                    className="u-progress-bar"
+                                                    style={{ width: `${progressPercent}%` }}
+                                                ></div>
+                                            </div>
+
+                                            <div className="u-slots">
+                                                {dayPlan.slots.map((slot) => {
+                                                    const taskId = `${dayPlan.date}-${slot.name}`;
+                                                    return (
+                                                        <div
+                                                            key={slot.name}
+                                                            className={`u-slot-item ${slot.completed ? 'completed' : ''}`}
+                                                            onClick={() => toggleComplete(dayPlan.date, slot.name, slot.completed)}
+                                                        >
+                                                            <div className="u-content">
+                                                                <div className="u-slot-subj">{slot.subject} • {slot.name}</div>
+                                                                <div className="u-slot-task">{slot.task}</div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {view === 'history' && (
+                <div className="view-history">
+                    <h2 className="section-title">COMPLETED TASKS</h2>
+                    <div className="history-list">
+                        {history.map((item, idx) => {
+                            const taskId = `${item.date}-${item.slot.name}`;
+                            const isLoading = loadingTask === taskId;
+                            return (
+                                <div key={`${item.date}-${idx}`} className="history-row">
+                                    <div className="h-date-col">
+                                        <span className="h-date">{item.date}</span>
+                                    </div>
+                                    <div className="h-content">
+                                        <span className="h-subject">{item.slot.subject}</span>
+                                        <span className="h-task">{item.slot.task}</span>
+                                    </div>
+                                    <div
+                                        className="h-action"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleComplete(item.date, item.slot.name, item.slot.completed);
+                                        }}
+                                    >
+                                        {isLoading ? <div className="spinner-xs dark"></div> : "UNDO"}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                            );
+                        })}
+                        {history.length === 0 && <div className="empty-state">NO HISTORY YET</div>}
                     </div>
                 </div>
             )
-            }
-
-            {
-                view === 'history' && (
-                    <div className="view-history">
-                        <h2 className="section-title">COMPLETED TASKS</h2>
-                        <div className="history-list">
-                            {history.map((item, idx) => {
-                                const taskId = `${item.date}-${item.slot.name}`;
-                                const isLoading = loadingTask === taskId;
-                                return (
-                                    <div key={`${item.date}-${idx}`} className="history-row">
-                                        <div className="h-date-col">
-                                            <span className="h-date">{item.date}</span>
-                                        </div>
-                                        <div className="h-content">
-                                            <span className="h-subject">{item.slot.subject}</span>
-                                            <span className="h-task">{item.slot.task}</span>
-                                        </div>
-                                        <div
-                                            className="h-action"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleComplete(item.date, item.slot.name, item.slot.completed);
-                                            }}
-                                        >
-                                            {isLoading ? <div className="spinner-xs dark"></div> : "UNDO"}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            {history.length === 0 && <div className="empty-state">NO HISTORY YET</div>}
-                        </div>
-                    </div>
-                )
             }
         </div >
     );
