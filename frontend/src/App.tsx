@@ -25,36 +25,36 @@ interface SubjectStats {
 }
 
 const QUOTES = [
-    "The simple path forward is silence and consistent hard work.",
-    "Pray for strength to endure, not for an easy life.",
-    "We suffer more often in imagination than we do in reality.",
-    "What stands in the way becomes the way. Obstacles advance action.",
-    "He who has a why can bear almost any how.",
-    "Discipline is doing what you hate like you love it.",
-    "Fear never beginning to live, not the end of life.",
-    "The only easy day was yesterday. Today demands more.",
-    "Pain is temporary. The regret of quitting lasts forever.",
-    "You control your mind, not outside events. This is your strength.",
-    "Choose discipline today or suffer the pain of regret tomorrow.",
-    "Your future is created by what you do today, not tomorrow.",
-    "Success comes from consistency, not from occasional bursts of effort.",
-    "Focus on the process, not the outcome. Trust the journey.",
-    "Moving mountains begins by carrying away one small stone at a time.",
-    "Be so good they can't ignore you. Excellence speaks volumes.",
-    "Victory is reserved for those willing to pay its price.",
-    "Rivers cut through rock by persistence, not by power alone.",
-    "Don't stop when you're tired. Stop only when you're done.",
-    "Professionals get up and work. Amateurs wait for inspiration to strike.",
-    "Want something new? Do something you've never done before.",
-    "Your time is limited. Don't waste it living someone else's life.",
-    "Obsession beats talent every single time. Stay obsessed with your goals.",
-    "Stay hungry. Stay foolish. Never settle for comfortable mediocrity.",
-    "The gap between dreams and reality is called action. Bridge it.",
-    "Rule your mind or it will rule you. Choose wisely.",
-    "Civilize the mind but make savage the body through discipline.",
-    "Comfort is addicting. Break free or it will hold you forever.",
-    "Champions see the big picture: it's about every day hard work.",
-    "It's going to be hard, but hard does not mean impossible."
+    "Start now. Finish strong.",
+    "One task at a time.",
+    "Action beats perfection.",
+    "Do it now.",
+    "Finish what you started.",
+    "Keep going. You're almost there.",
+    "Today's work builds tomorrow's success.",
+    "Small steps. Big results.",
+    "Show up. Do the work.",
+    "Focus. Execute. Repeat.",
+    "Done is better than perfect.",
+    "The best time is now.",
+    "Make today count.",
+    "Discipline equals freedom.",
+    "Work hard. Stay humble.",
+    "Progress over perfection.",
+    "You got this.",
+    "Stay focused. Stay disciplined.",
+    "Every task completed is progress made.",
+    "Trust the process.",
+    "Consistency is key.",
+    "No excuses. Just results.",
+    "Winners finish what they start.",
+    "Stop thinking. Start doing.",
+    "Your future depends on today's work.",
+    "Outwork your doubts.",
+    "Show up every single day.",
+    "Results require relentless effort.",
+    "Be disciplined. Be unstoppable.",
+    "Finish strong today."
 ];
 
 function getQuoteForToday() {
@@ -219,7 +219,16 @@ function App() {
 
     const onTouchStart = (e: React.TouchEvent) => {
         setTouchEnd(null); // Reset
-        setTouchStart(e.targetTouches[0].clientX);
+
+        // Check if touch started on a scrollable container
+        const target = e.target as HTMLElement;
+        const isScrollableContainer = target.closest('.upcoming-scroll, .backlog-scroll');
+
+        if (isScrollableContainer) {
+            setTouchStart(null); // Don't track swipes in scrollable areas
+        } else {
+            setTouchStart(e.targetTouches[0].clientX);
+        }
     };
 
     const onTouchMove = (e: React.TouchEvent) => {
