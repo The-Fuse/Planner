@@ -34,11 +34,18 @@ def init_db():
         cursor = conn.cursor()
         
         # Create progress table
-        # Syntax is compatible with both SQLite and PostgreSQL
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS progress (
                 key VARCHAR(255) PRIMARY KEY,
                 completed INTEGER NOT NULL
+            )
+        ''')
+
+        # Create preferences table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS preferences (
+                key VARCHAR(255) PRIMARY KEY,
+                value TEXT
             )
         ''')
         
@@ -122,3 +129,43 @@ def save_progress(data):
         conn.close()
     except Exception as e:
         print(f"Database error in save_progress: {e}")
+
+def get_preference(key, default=None):
+    """Get a preference value by key"""
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        
+        if db_type == "postgres":
+             cursor.execute('SELECT value FROM preferences WHERE key = %s', (key,))
+        else:
+             cursor.execute('SELECT value FROM preferences WHERE key = ?', (key,))
+             
+        row = cursor.fetchone()
+        conn.close()
+        
+        return row[0] if row else default
+    except Exception as e:
+        print(f"Database error in get_preference: {e}")
+        return default
+
+def set_preference(key, value):
+    """Set a preference value"""
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        
+        if db_type == "postgres":
+            # UPSERT syntax for Postgres
+            cursor.execute('''
+                INSERT INTO preferences (key, value) VALUES (%s, %s)
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+            ''', (key, value))
+        else:
+            # UPSERT syntax for SQLite
+            cursor.execute('INSERT OR REPLACE INTO preferences (key, value) VALUES (?, ?)', (key, value))
+            
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Database error in set_preference: {e}")

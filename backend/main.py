@@ -1,10 +1,15 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from scheduler import generate_schedule
-from storage import load_progress, save_progress, init_db
+from storage import load_progress, save_progress, init_db, get_preference, set_preference
 import os
+from pydantic import BaseModel
 
 app = FastAPI()
+
+class PreferenceInput(BaseModel):
+    key: str
+    value: str
 
 app.add_middleware(
     CORSMiddleware,
@@ -66,6 +71,16 @@ def get_stats():
                     stats[subj]["completed"] += 1
                     
     return stats
+
+@app.get("/api/preferences/{key}")
+def get_pref_api(key: str):
+    val = get_preference(key)
+    return {"key": key, "value": val}
+
+@app.post("/api/preferences")
+def set_pref_api(pref: PreferenceInput):
+    set_preference(pref.key, pref.value)
+    return {"status": "success", "key": pref.key, "value": pref.value}
 
 if __name__ == "__main__":
     import uvicorn
