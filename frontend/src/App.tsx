@@ -23,16 +23,36 @@ interface SubjectStats {
 }
 
 const QUOTES = [
-    "The secret of getting ahead is getting started.",
-    "It always seems impossible until it's done.",
-    "Don't watch the clock; do what it does. Keep going.",
-    "The future depends on what you do today.",
-    "Success is the sum of small efforts, repeated day in and day out.",
-    "Believe you can and you're halfway there.",
-    "Your limitation—it's only your imagination.",
-    "Push yourself, because no one else is going to do it for you.",
-    "Great things never come from comfort zones.",
-    "Dream it. Wish it. Do it."
+    "The simple path is silence and hard work.",
+    "Do not pray for an easy life, pray for the strength to endure a difficult one.",
+    "We suffer more often in imagination than in reality.",
+    "The impediment to action advances action. What stands in the way becomes the way.",
+    "He who has a why to live for can bear almost any how.",
+    "Discipline is doing what you hate to do, but doing it like you love it.",
+    "It is not death that a man should fear, but he should fear never beginning to live.",
+    "The only easy day was yesterday.",
+    "Pain is temporary. Quitting lasts forever.",
+    "You have power over your mind - not outside events. Realize this, and you will find strength.",
+    "Suffer the pain of discipline, or suffer the pain of regret.",
+    "Your future is created by what you do today, not tomorrow.",
+    "Success doesn't come from what you do occasionally, it comes from what you do consistently.",
+    "Focus on the process, not the outcome.",
+    "The man who moves a mountain begins by carrying away small stones.",
+    "Be so good they can't ignore you.",
+    "Victory is reserved for those who are willing to pay its price.",
+    "A river cuts through rock, not because of its power, but because of its persistence.",
+    "Don't stop when you're tired. Stop when you're done.",
+    "Amateurs sit and wait for inspiration, the rest of us just get up and go to work.",
+    "If you want something you've never had, you must be willing to do something you've never done.",
+    "Your time is limited, so don't waste it living someone else's life.",
+    "Obsession beats talent every time.",
+    "Stay hungry. Stay foolish.",
+    "The gap between your dreams and reality is called action.",
+    "Rule your mind or it will rule you.",
+    "Civilize the mind but make savage the body.",
+    "Comfort is a drug. Once you get used to it, it becomes addicting.",
+    "To be a champion, I think you have to see the big picture. It's not about winning and losing; it's about every day hard work.",
+    "It's going to be hard, but hard does not mean impossible."
 ];
 
 function getQuoteForToday() {
