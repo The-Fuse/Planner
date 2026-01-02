@@ -335,7 +335,38 @@ function App() {
                                                         <span className="slot-time">{slot.name}</span>
                                                         <span className="slot-subj">{slot.subject}</span>
                                                     </div>
-                                                    <div className="slot-desc">{slot.task}</div>
+                                                    <div className="slot-desc">
+                                                        {(() => {
+                                                            // Match pattern: "34. High Court (pp.360-362), 35. Subordinate Courts (pp.363-364)"
+                                                            const itemRegex = /(\d+)\.\s*([^(,]+)\s*(?:\(([^)]+)\))?(?:,\s*)?/g;
+                                                            const items = [];
+                                                            let match;
+
+                                                            while ((match = itemRegex.exec(slot.task)) !== null) {
+                                                                items.push({
+                                                                    number: match[1],
+                                                                    title: match[2].trim(),
+                                                                    pages: match[3] || null
+                                                                });
+                                                            }
+
+                                                            if (items.length > 0) {
+                                                                return (
+                                                                    <div className="task-items">
+                                                                        {items.map((item, idx) => (
+                                                                            <div key={idx} className="task-item">
+                                                                                <span className="item-number">{item.number}.</span>
+                                                                                <span className="item-title">{item.title}</span>
+                                                                                {item.pages && <span className="item-pages">{item.pages}</span>}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            return <div className="task-item-fallback">{slot.task}</div>;
+                                                        })()}
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
@@ -353,7 +384,12 @@ function App() {
                         <div className="section backlog-section">
                             <div className="section-header">
                                 <h2 className="section-title">BACKLOG</h2>
-                                <span className="badge">{backlog.length}</span>
+                                <span className="badge">
+                                    {(() => {
+                                        const uniqueDays = new Set(backlog.map(item => item.date)).size;
+                                        return `${uniqueDays} ${uniqueDays === 1 ? 'DAY' : 'DAYS'}`;
+                                    })()}
+                                </span>
                             </div>
                             <div className="backlog-scroll">
                                 {backlog.map((item, idx) => {
@@ -372,7 +408,37 @@ function App() {
                                             </div>
 
                                             <div className="card-bottom">
-                                                <div className="card-task">{item.slot.task}</div>
+                                                <div className="card-task">
+                                                    {(() => {
+                                                        const itemRegex = /(\d+)\.\s*([^(,]+)\s*(?:\(([^)]+)\))?(?:,\s*)?/g;
+                                                        const items = [];
+                                                        let match;
+
+                                                        while ((match = itemRegex.exec(item.slot.task)) !== null) {
+                                                            items.push({
+                                                                number: match[1],
+                                                                title: match[2].trim(),
+                                                                pages: match[3] || null
+                                                            });
+                                                        }
+
+                                                        if (items.length > 0) {
+                                                            return (
+                                                                <div className="task-items">
+                                                                    {items.map((taskItem, taskIdx) => (
+                                                                        <div key={taskIdx} className="task-item">
+                                                                            <span className="item-number">{taskItem.number}.</span>
+                                                                            <span className="item-title">{taskItem.title}</span>
+                                                                            {taskItem.pages && <span className="item-pages">{taskItem.pages}</span>}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        return <div className="task-item-fallback">{item.slot.task}</div>;
+                                                    })()}
+                                                </div>
                                                 <div
                                                     className="card-action"
                                                     onClick={(e) => {
@@ -432,7 +498,37 @@ function App() {
                                                         >
                                                             <div className="u-content">
                                                                 <div className="u-slot-subj">{slot.subject} • {slot.name}</div>
-                                                                <div className="u-slot-task">{slot.task}</div>
+                                                                <div className="u-slot-task">
+                                                                    {(() => {
+                                                                        const itemRegex = /(\d+)\.\s*([^(,]+)\s*(?:\(([^)]+)\))?(?:,\s*)?/g;
+                                                                        const items = [];
+                                                                        let match;
+
+                                                                        while ((match = itemRegex.exec(slot.task)) !== null) {
+                                                                            items.push({
+                                                                                number: match[1],
+                                                                                title: match[2].trim(),
+                                                                                pages: match[3] || null
+                                                                            });
+                                                                        }
+
+                                                                        if (items.length > 0) {
+                                                                            return (
+                                                                                <div className="task-items">
+                                                                                    {items.map((taskItem, taskIdx) => (
+                                                                                        <div key={taskIdx} className="task-item">
+                                                                                            <span className="item-number">{taskItem.number}.</span>
+                                                                                            <span className="item-title">{taskItem.title}</span>
+                                                                                            {taskItem.pages && <span className="item-pages">{taskItem.pages}</span>}
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            );
+                                                                        }
+
+                                                                        return <div className="task-item-fallback">{slot.task}</div>;
+                                                                    })()}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     );
