@@ -338,7 +338,7 @@ function App() {
                                                     <div className="slot-desc">
                                                         {(() => {
                                                             // Match pattern: "34. High Court (pp.360-362), 35. Subordinate Courts (pp.363-364)"
-                                                            const itemRegex = /(\d+)\.\s*([^(,]+)\s*(?:\(([^)]+)\))?(?:,\s*)?/g;
+                                                            const itemRegex = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
                                                             const items = [];
                                                             let match;
 
@@ -410,7 +410,7 @@ function App() {
                                             <div className="card-bottom">
                                                 <div className="card-task">
                                                     {(() => {
-                                                        const itemRegex = /(\d+)\.\s*([^(,]+)\s*(?:\(([^)]+)\))?(?:,\s*)?/g;
+                                                        const itemRegex = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
                                                         const items = [];
                                                         let match;
 
@@ -500,7 +500,7 @@ function App() {
                                                                 <div className="u-slot-subj">{slot.subject} • {slot.name}</div>
                                                                 <div className="u-slot-task">
                                                                     {(() => {
-                                                                        const itemRegex = /(\d+)\.\s*([^(,]+)\s*(?:\(([^)]+)\))?(?:,\s*)?/g;
+                                                                        const itemRegex = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
                                                                         const items = [];
                                                                         let match;
 
@@ -560,7 +560,7 @@ function App() {
                                         <span className="h-task">{item.slot.task}</span>
                                     </div>
                                     <div
-                                        className="h-action"
+                                        className={`h-action ${isLoading ? 'visible' : ''}`}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             toggleComplete(item.date, item.slot.name, item.slot.completed);
