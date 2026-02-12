@@ -42,7 +42,7 @@ Render is a great option for free hosting. You will deploy the backend and front
     - Action: `Rewrite`
 
 ### 3. Connecting Frontend to Backend
-In your frontend code (`App.tsx`), the API URL is currently hardcoded to `http://localhost:8000`. For production, you need to update this to point to your deployed backend URL.
+In your frontend code (`App.tsx`), the API URL defaults to the production URL (`https://planner-936q.onrender.com`). For local development, it uses `VITE_API_URL`.
 
 **Recommended**: Use an environment variable.
 1.  Create `.env` in `frontend`:
