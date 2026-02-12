@@ -29,9 +29,12 @@ def calculate_limit(tracker, slot_type, other_tracker=None, other_hardness_value
         return LIMITS.get(slot_type, 25)
 
     # 1. Convert hardness -> minutes per page
-    current_chapter = tracker.chapters[tracker.current_chapter_idx]
-    hardness = current_chapter.get('hardness', 1.0)
-    min_per_page = get_minutes_per_page(hardness)
+    if tracker.finished or tracker.current_chapter_idx >= len(tracker.chapters):
+        min_per_page = 3 # Default to easy if finished
+    else:
+        current_chapter = tracker.chapters[tracker.current_chapter_idx]
+        hardness = current_chapter.get('hardness', 1.0)
+        min_per_page = get_minutes_per_page(hardness)
 
     # 2. Slot reading time
     if slot_type == "Morning":
@@ -109,6 +112,7 @@ class SubjectTracker:
             if not found:
                 # Means start_from_page is > last chapter's end
                 self.finished = True
+                self.current_chapter_idx = len(self.chapters) # Boundary safety
 
     def get_next_chunk(self, max_pages):
         if self.finished:
@@ -154,6 +158,9 @@ def generate_schedule():
         SubjectTracker("History", subjects_data["History"], start_from_page=372),
     ]
     
+    economy_tracker = SubjectTracker("Economy", subjects_data["Economy"])
+    economy_injected = False
+    
     # Active subjects
     active_slot1 = waiting_list.pop(0) if waiting_list else None
     active_slot2 = waiting_list.pop(0) if waiting_list else None
@@ -164,11 +171,28 @@ def generate_schedule():
     
     # Run until both active slots are finished AND no one is waiting
     while True:
+        # Economy injection check: on Feb 12, make Economy the sole focus
+        if current_date == datetime.date(2026, 2, 12) and not economy_injected:
+            # 1. Put current active subjects back in wait list (only if NOT finished)
+            if active_slot1 and not active_slot1.finished:
+                waiting_list.insert(0, active_slot1)
+            if active_slot2 and not active_slot2.finished:
+                waiting_list.insert(0, active_slot2)
+            
+            # 2. Assign Economy to Slot 1, keep Slot 2 empty for total focus
+            active_slot1 = economy_tracker
+            active_slot2 = None
+            economy_injected = True
+        
+        # Economy focus rule definition
+        economy_focus = economy_injected and not economy_tracker.finished
+
         # Check completion condition
         s1_active = (active_slot1 and not active_slot1.finished)
         s2_active = (active_slot2 and not active_slot2.finished)
         
-        if not s1_active and not s2_active and not waiting_list:
+        unfinished_waiting = any(not s.finished for s in waiting_list)
+        if economy_injected and economy_tracker.finished and not unfinished_waiting:
             break
 
         day_name = current_date.strftime("%A")
@@ -186,12 +210,14 @@ def generate_schedule():
             morning_hardness = 0.0
 
             # Slot 1
+            # Keep refilling active_slot1 if it's finished and we have more in waiting_list
+            while (not active_slot1 or active_slot1.finished) and waiting_list:
+                active_slot1 = waiting_list.pop(0)
+
             if active_slot1 and not active_slot1.finished:
                 morning_hardness = active_slot1.chapters[active_slot1.current_chapter_idx].get('hardness', 1.0)
                 base_cap = LIMITS["Morning_Polity"] if active_slot1.name == "Polity" else LIMITS["Morning_Default"]
                 
-                # Check slot2 hardness for fatigue check? Not directly available until we check it.
-                # But we can peek.
                 other_h_val = None
                 if active_slot2 and not active_slot2.finished:
                     other_h_val = active_slot2.chapters[active_slot2.current_chapter_idx].get('hardness', 1.0)
@@ -200,83 +226,52 @@ def generate_schedule():
                 task = active_slot1.get_next_chunk(limit)
                 if task:
                     day_plan["slots"].append({"name": "Morning", "subject": active_slot1.name, "task": task})
-            elif active_slot1 and active_slot1.finished:
-                 # Replace if finished
-                if waiting_list:
-                    active_slot1 = waiting_list.pop(0)
-                    morning_hardness = active_slot1.chapters[active_slot1.current_chapter_idx].get('hardness', 1.0)
-                    base_cap = LIMITS["Morning_Polity"] if active_slot1.name == "Polity" else LIMITS["Morning_Default"]
-                    
-                    # Recalculate fatigue?
-                    other_h_val = None
-                    if active_slot2 and not active_slot2.finished:
-                        other_h_val = active_slot2.chapters[active_slot2.current_chapter_idx].get('hardness', 1.0)
-                        
-                    limit = calculate_limit(active_slot1, "Morning", other_hardness_value=other_h_val, base_cap_override=base_cap)
-                    task = active_slot1.get_next_chunk(limit)
-                    if task:
-                        day_plan["slots"].append({"name": "Morning", "subject": active_slot1.name, "task": task})
-                # Else: leave empty or buffer? Original logic added Buffer. 
-                # If we want to end when tasks end, strictly we might not need buffer if it extends the schedule artificially. 
-                # But user said "end date ... when longest subject ends". So shorter subject might have buffers.
-                # However, original logic just added "Buffer" tasks indefinitely until END_DATE.
-                # Since we removed fixed END_DATE, we shouldn't add infinite buffers.
-                # We should only add buffer if AT LEAST ONE other subject is still running.
-                else: 
-                     if s2_active: # If the other slot is still running, fill this with revision/buffer
-                         day_plan["slots"].append({"name": "Morning", "subject": "Buffer", "task": "Revision"})
-                         morning_hardness = 0.0
+                else:
+                    day_plan["slots"].append({"name": "Morning", "subject": "Revision", "task": "Subject Revision"})
+                    morning_hardness = 0.0
+            else:
+                day_plan["slots"].append({"name": "Morning", "subject": "Revision", "task": "Subject Revision"})
+                morning_hardness = 0.0
 
-            # Slot 2
-            if active_slot2 and not active_slot2.finished:
-                limit = calculate_limit(active_slot2, "Evening", other_hardness_value=morning_hardness)
-                task = active_slot2.get_next_chunk(limit)
-                if task:
-                    day_plan["slots"].append({"name": "Evening", "subject": active_slot2.name, "task": task})
-            elif active_slot2 and active_slot2.finished:
-                 # Replace
-                if waiting_list:
+            # Slot 2 (Evening)
+            if not economy_focus:
+                # Keep refilling active_slot2 if it's finished and we have more in waiting_list
+                while (not active_slot2 or active_slot2.finished) and waiting_list:
                     active_slot2 = waiting_list.pop(0)
+
+                if active_slot2 and not active_slot2.finished:
                     limit = calculate_limit(active_slot2, "Evening", other_hardness_value=morning_hardness)
                     task = active_slot2.get_next_chunk(limit)
                     if task:
                         day_plan["slots"].append({"name": "Evening", "subject": active_slot2.name, "task": task})
+                    else:
+                        day_plan["slots"].append({"name": "Evening", "subject": "Revision", "task": "Subject Revision"})
                 else:
-                    # Only add buffer if slot 1 is still active
-                    if (active_slot1 and not active_slot1.finished):
-                        day_plan["slots"].append({"name": "Evening", "subject": "Buffer", "task": "Revision"})
+                    day_plan["slots"].append({"name": "Evening", "subject": "Revision", "task": "Subject Revision"})
 
         else:
             # Weekend: Block 1 (Subj 1), Block 2 (Subj 2), Block 3 (Balance)
             
             # Block 1
+            while (not active_slot1 or active_slot1.finished) and waiting_list:
+                active_slot1 = waiting_list.pop(0)
+
             if active_slot1 and not active_slot1.finished:
                 base_cap = LIMITS["Weekend_Polity"] if active_slot1.name == "Polity" else LIMITS["Weekend_Default"]
                 limit = calculate_limit(active_slot1, "WeekendBlock", base_cap_override=base_cap)
                 task = active_slot1.get_next_chunk(limit)
                 if task:
                     day_plan["slots"].append({"name": "Block 1", "subject": active_slot1.name, "task": task})
-            elif active_slot1 and active_slot1.finished:
-                if waiting_list:
-                    active_slot1 = waiting_list.pop(0)
-                    base_cap = LIMITS["Weekend_Polity"] if active_slot1.name == "Polity" else LIMITS["Weekend_Default"]
-                    limit = calculate_limit(active_slot1, "WeekendBlock", base_cap_override=base_cap)
-                    task = active_slot1.get_next_chunk(limit)
-                    if task:
-                        day_plan["slots"].append({"name": "Block 1", "subject": active_slot1.name, "task": task})
                 else:
                     if (active_slot2 and not active_slot2.finished):
                         day_plan["slots"].append({"name": "Block 1", "subject": "Buffer", "task": "Revision"})
             
             # Block 2
-            if active_slot2 and not active_slot2.finished:
-                limit = calculate_limit(active_slot2, "WeekendBlock", base_cap_override=LIMITS["Weekend_Default"])
-                task = active_slot2.get_next_chunk(limit)
-                if task:
-                    day_plan["slots"].append({"name": "Block 2", "subject": active_slot2.name, "task": task})
-            elif active_slot2 and active_slot2.finished:
-                if waiting_list:
+            if not economy_focus:
+                while (not active_slot2 or active_slot2.finished) and waiting_list:
                     active_slot2 = waiting_list.pop(0)
+
+                if active_slot2 and not active_slot2.finished:
                     limit = calculate_limit(active_slot2, "WeekendBlock", base_cap_override=LIMITS["Weekend_Default"])
                     task = active_slot2.get_next_chunk(limit)
                     if task:
@@ -296,7 +291,7 @@ def generate_schedule():
         
         schedule.append(day_plan)
         current_date += datetime.timedelta(days=1)
-        
+
     return schedule
 
 if __name__ == "__main__":

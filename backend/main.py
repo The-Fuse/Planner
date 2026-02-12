@@ -51,7 +51,8 @@ def get_stats():
     
     stats = {
         "Polity": {"total": 0, "completed": 0},
-        "History": {"total": 0, "completed": 0}
+        "History": {"total": 0, "completed": 0},
+        "Economy": {"total": 0, "completed": 0}
     }
     
     # Iterate through the schedule to count totals
@@ -70,7 +71,10 @@ def get_stats():
                 if completion_status.get(key, False):
                     stats[subj]["completed"] += 1
                     
-    return stats
+    return {
+        "stats": stats,
+        "completed_subjects": ["Polity", "History"]
+    }
 
 @app.get("/api/preferences/{key}")
 def get_pref_api(key: str):

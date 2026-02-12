@@ -128,5 +128,21 @@ subjects_data = {
         {"chapter": "48. The UPA Years (2004–2014)", "start": 880, "end": 885, "hardness": 2.5},
         {"chapter": "49. The NDA Government (2014 Onwards)", "start": 893, "end": 918, "hardness": 2.6},
         {"chapter": "Appendices", "start": 919, "end": 976, "hardness": 1.0}
-  ]
+    ],
+
+    "Economy": [
+        {"chapter": "1. Introduction to Economics", "start": 1, "end": 8, "hardness": 2.5},
+        {"chapter": "2. National Income", "start": 9, "end": 19, "hardness": 3.8},
+        {"chapter": "3. Inflation and Business Cycle", "start": 20, "end": 28, "hardness": 4.2},
+        {"chapter": "4. Monetary Policy", "start": 29, "end": 36, "hardness": 4.5},
+        {"chapter": "5. Public Finance and Fiscal Policy", "start": 37, "end": 47, "hardness": 4.3},
+        {"chapter": "6. Financial Market", "start": 48, "end": 58, "hardness": 3.7},
+        {"chapter": "7. Money Supply", "start": 59, "end": 62, "hardness": 3.6},
+        {"chapter": "8. External Sector", "start": 63, "end": 82, "hardness": 4.8},
+        {"chapter": "9. Planning in India", "start": 83, "end": 94, "hardness": 3.0},
+        {"chapter": "10. Taxation", "start": 95, "end": 114, "hardness": 4.0},
+        {"chapter": "11. Banking System in India", "start": 115, "end": 137, "hardness": 4.7},
+        {"chapter": "12. International Financial Institutions", "start": 138, "end": 150, "hardness": 4.4},
+        {"chapter": "13. Insurance in India", "start": 151, "end": 156, "hardness": 3.2}
+    ]
 }

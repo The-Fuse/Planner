@@ -215,6 +215,45 @@ body {
 }
 
 /* BACKLOG */
+.backlog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.urgency-prompt {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--fg);
+  background: var(--surface-hover);
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.7;
+  }
+}
+
 .backlog-scroll {
   display: flex;
   gap: 20px;
@@ -244,7 +283,8 @@ body {
 }
 
 .backlog-card:hover {
-  border-color: var(--text-muted);
+  border-color: var(--fg);
+  /* Highlight border on hover */
   background: var(--surface-hover);
 }
 
@@ -328,10 +368,12 @@ body {
 }
 
 .card-action {
-  font-size: 8px;
-  font-weight: 600;
+  font-size: 9px;
+  /* Slightly larger action text */
+  font-weight: 700;
   letter-spacing: 0.1em;
-  color: var(--text-muted);
+  color: var(--fg);
+  /* More prominent action text */
   cursor: pointer;
   transition: all 0.2s ease;
   text-transform: uppercase;
@@ -341,12 +383,13 @@ body {
 }
 
 .card-action:hover {
-  color: var(--fg);
+  opacity: 0.7;
 }
 
 /* TODAY */
 .today-section {
-  margin-bottom: 40px;
+  margin-bottom: 60px;
+  /* More breathing room */
 }
 
 /* New Layout: Progress Bar above card */
@@ -384,15 +427,23 @@ body {
 .today-card-container {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 20px;
+  /* Larger radius */
   overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.03);
-  /* Subtle light shadow */
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.05);
+  /* Enhanced shadow for depth */
   position: relative;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.today-card-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.08);
 }
 
 .today-header {
-  padding: 40px 40px 24px;
+  padding: 48px 48px 32px;
+  /* Increased padding */
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -408,7 +459,8 @@ body {
 }
 
 .today-num {
-  font-size: 72px;
+  font-size: 84px;
+  /* Larger date number */
   font-weight: 200;
   line-height: 0.8;
   letter-spacing: -0.05em;
@@ -418,23 +470,23 @@ body {
 
 .today-month-row {
   margin: 0;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
   /* Lift it up a bit relative to number baseline */
 }
 
 .today-month {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   /* Slightly larger for short text */
   font-weight: 600;
   color: var(--text-muted);
-  letter-spacing: 0.2em;
+  letter-spacing: 0.25em;
   text-transform: uppercase;
   transform: rotate(-90deg);
   transform-origin: left bottom;
   white-space: nowrap;
   /* Adjust position to compensate for rotation */
-  margin-left: 4px;
+  margin-left: 6px;
 }
 
 .today-right-col {
@@ -448,14 +500,14 @@ body {
 }
 
 .today-day {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--fg);
   background: var(--surface-hover);
-  padding: 4px 12px;
-  border-radius: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
   margin-bottom: auto;
   /* Pushes quote down */
 }
@@ -463,12 +515,13 @@ body {
 .quote-box {
   max-width: 320px;
   font-family: var(--font-serif);
-  font-size: 15px;
+  font-size: 16px;
+  /* Slightly larger quote */
   font-style: italic;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.6;
   text-align: right;
-  margin-top: 16px;
+  margin-top: 24px;
 }
 
 /* TODAY PROGRESS BAR SEPARATOR */
@@ -959,6 +1012,7 @@ body {
   flex: 1;
   min-width: 0;
 }
+
 /* Keep action visible during loading */
 .h-action.visible {
   opacity: 1;

@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Moon, Sun, Check, RefreshCw, AlertCircle } f
 import Dashboard from './components/Dashboard';
 import './App.css';
 
-const API_BASE_URL = 'https://planner-936q.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://planner-936q.onrender.com';
 
 interface Slot {
     name: string;
@@ -65,6 +65,7 @@ function getQuoteForToday() {
 function App() {
     const [schedule, setSchedule] = useState<DayPlan[]>([]);
     const [stats, setStats] = useState<{ [key: string]: SubjectStats }>({});
+    const [completedSubjects, setCompletedSubjects] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Calculate days until exam (May 24, 2026)
@@ -91,7 +92,8 @@ function App() {
                 axios.get(`${API_BASE_URL}/api/stats`)
             ]);
             setSchedule(planRes.data);
-            setStats(statsRes.data);
+            setStats(statsRes.data.stats || statsRes.data);
+            setCompletedSubjects(statsRes.data.completed_subjects || []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -171,7 +173,8 @@ function App() {
             }));
 
             const statsRes = await axios.get(`${API_BASE_URL}/api/stats`);
-            setStats(statsRes.data);
+            setStats(statsRes.data.stats || statsRes.data);
+            setCompletedSubjects(statsRes.data.completed_subjects || []);
 
         } catch (err) {
             console.error(err);
@@ -242,6 +245,10 @@ function App() {
 
     const subjectProgress = getSubjectProgress();
 
+    // Split Backlog by Subject
+    const polityBacklog = backlog.filter(b => b.slot.subject === 'Polity');
+    const historyBacklog = backlog.filter(b => b.slot.subject === 'History');
+
     if (loading) return <div className="loading">LOADING</div>;
 
     return (
@@ -288,7 +295,7 @@ function App() {
                         ))}
                     </div>
 
-                    {/* TODAY SECTION */}
+                    {/* TODAY SECTION - NOW AT THE TOP */}
                     {todayPlan && (
                         <div className="section today-section">
                             {/* UNIFIED HEADER STYLE */}
@@ -341,7 +348,6 @@ function App() {
                                                             const itemRegex = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
                                                             const items = [];
                                                             let match;
-
                                                             while ((match = itemRegex.exec(slot.task)) !== null) {
                                                                 items.push({
                                                                     number: match[1],
@@ -349,7 +355,6 @@ function App() {
                                                                     pages: match[3] || null
                                                                 });
                                                             }
-
                                                             if (items.length > 0) {
                                                                 return (
                                                                     <div className="task-items">
@@ -363,7 +368,6 @@ function App() {
                                                                     </div>
                                                                 );
                                                             }
-
                                                             return <div className="task-item-fallback">{slot.task}</div>;
                                                         })()}
                                                     </div>
@@ -376,23 +380,20 @@ function App() {
                         </div>
                     )}
 
-                    {/* DASHBOARD STATS */}
-
-
-                    {/* BACKLOG SECTION */}
-                    {backlog.length > 0 && (
+                    {/* POLITY BACKLOG */}
+                    {polityBacklog.length > 0 && (
                         <div className="section backlog-section">
-                            <div className="section-header">
-                                <h2 className="section-title">BACKLOG</h2>
+                            <div className="section-header backlog-header">
+                                <h2 className="section-title">POLITY BACKLOG</h2>
                                 <span className="badge">
                                     {(() => {
-                                        const uniqueDays = new Set(backlog.map(item => item.date)).size;
+                                        const uniqueDays = new Set(polityBacklog.map(item => item.date)).size;
                                         return `${uniqueDays} ${uniqueDays === 1 ? 'DAY' : 'DAYS'}`;
                                     })()}
                                 </span>
                             </div>
                             <div className="backlog-scroll">
-                                {backlog.map((item, idx) => {
+                                {polityBacklog.map((item, idx) => {
                                     const taskId = `${item.date}-${item.slot.name}`;
                                     const isLoading = loadingTask === taskId;
                                     return (
@@ -401,19 +402,15 @@ function App() {
                                                 <span className="card-date">{item.date.split('-')[2]} {new Date(item.date).toLocaleString('default', { month: 'short' })}</span>
                                                 <span className="card-subject">{item.slot.subject}</span>
                                             </div>
-
-                                            {/* PROGRESS BAR SEPARATOR */}
                                             <div className="b-progress-container-internal">
                                                 <div className="b-progress-bar" style={{ width: '0%' }}></div>
                                             </div>
-
                                             <div className="card-bottom">
                                                 <div className="card-task">
                                                     {(() => {
                                                         const itemRegex = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
                                                         const items = [];
                                                         let match;
-
                                                         while ((match = itemRegex.exec(item.slot.task)) !== null) {
                                                             items.push({
                                                                 number: match[1],
@@ -421,7 +418,6 @@ function App() {
                                                                 pages: match[3] || null
                                                             });
                                                         }
-
                                                         if (items.length > 0) {
                                                             return (
                                                                 <div className="task-items">
@@ -435,17 +431,75 @@ function App() {
                                                                 </div>
                                                             );
                                                         }
-
                                                         return <div className="task-item-fallback">{item.slot.task}</div>;
                                                     })()}
                                                 </div>
-                                                <div
-                                                    className="card-action"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        toggleComplete(item.date, item.slot.name, item.slot.completed);
-                                                    }}
-                                                >
+                                                <div className="card-action" onClick={(e) => { e.stopPropagation(); toggleComplete(item.date, item.slot.name, item.slot.completed); }}>
+                                                    {isLoading ? <div className="spinner-xs"></div> : "MARK DONE"}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* HISTORY BACKLOG */}
+                    {historyBacklog.length > 0 && (
+                        <div className="section backlog-section">
+                            <div className="section-header backlog-header">
+                                <h2 className="section-title">HISTORY BACKLOG</h2>
+                                <span className="badge">
+                                    {(() => {
+                                        const uniqueDays = new Set(historyBacklog.map(item => item.date)).size;
+                                        return `${uniqueDays} ${uniqueDays === 1 ? 'DAY' : 'DAYS'}`;
+                                    })()}
+                                </span>
+                            </div>
+                            <div className="backlog-scroll">
+                                {historyBacklog.map((item, idx) => {
+                                    const taskId = `${item.date}-${item.slot.name}`;
+                                    const isLoading = loadingTask === taskId;
+                                    return (
+                                        <div key={`${item.date}-${idx}`} className="card backlog-card">
+                                            <div className="card-top">
+                                                <span className="card-date">{item.date.split('-')[2]} {new Date(item.date).toLocaleString('default', { month: 'short' })}</span>
+                                                <span className="card-subject">{item.slot.subject}</span>
+                                            </div>
+                                            <div className="b-progress-container-internal">
+                                                <div className="b-progress-bar" style={{ width: '0%' }}></div>
+                                            </div>
+                                            <div className="card-bottom">
+                                                <div className="card-task">
+                                                    {(() => {
+                                                        const itemRegex = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
+                                                        const items = [];
+                                                        let match;
+                                                        while ((match = itemRegex.exec(item.slot.task)) !== null) {
+                                                            items.push({
+                                                                number: match[1],
+                                                                title: match[2].trim(),
+                                                                pages: match[3] || null
+                                                            });
+                                                        }
+                                                        if (items.length > 0) {
+                                                            return (
+                                                                <div className="task-items">
+                                                                    {items.map((taskItem, taskIdx) => (
+                                                                        <div key={taskIdx} className="task-item">
+                                                                            <span className="item-number">{taskItem.number}.</span>
+                                                                            <span className="item-title">{taskItem.title}</span>
+                                                                            {taskItem.pages && <span className="item-pages">{taskItem.pages}</span>}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return <div className="task-item-fallback">{item.slot.task}</div>;
+                                                    })()}
+                                                </div>
+                                                <div className="card-action" onClick={(e) => { e.stopPropagation(); toggleComplete(item.date, item.slot.name, item.slot.completed); }}>
                                                     {isLoading ? <div className="spinner-xs"></div> : "MARK DONE"}
                                                 </div>
                                             </div>
