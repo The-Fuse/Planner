@@ -248,6 +248,7 @@ function App() {
     // Split Backlog by Subject
     const polityBacklog = backlog.filter(b => b.slot.subject === 'Polity');
     const historyBacklog = backlog.filter(b => b.slot.subject === 'History');
+    const economyBacklog = backlog.filter(b => b.slot.subject === 'Economy');
 
     if (loading) return <div className="loading">LOADING</div>;
 
@@ -376,6 +377,71 @@ function App() {
                                         );
                                     })}
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ECONOMY BACKLOG */}
+                    {economyBacklog.length > 0 && (
+                        <div className="section backlog-section">
+                            <div className="section-header backlog-header">
+                                <h2 className="section-title">ECONOMY BACKLOG</h2>
+                                <span className="badge">
+                                    {(() => {
+                                        const uniqueDays = new Set(economyBacklog.map(item => item.date)).size;
+                                        return `${uniqueDays} ${uniqueDays === 1 ? 'DAY' : 'DAYS'}`;
+                                    })()}
+                                </span>
+                            </div>
+                            <div className="backlog-scroll">
+                                {economyBacklog.map((item, idx) => {
+                                    const taskId = `${item.date}-${item.slot.name}`;
+                                    const isLoading = loadingTask === taskId;
+                                    return (
+                                        <div key={`${item.date}-${idx}`} className="card backlog-card">
+                                            <div className="card-top">
+                                                <span className="card-date">{item.date.split('-')[2]} {new Date(item.date).toLocaleString('default', { month: 'short' })}</span>
+                                                <span className="card-subject">{item.slot.subject}</span>
+                                            </div>
+                                            <div className="b-progress-container-internal">
+                                                <div className="b-progress-bar" style={{ width: '0%' }}></div>
+                                            </div>
+                                            <div className="card-bottom">
+                                                <div className="card-task">
+                                                    {(() => {
+                                                        const itemRegex = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
+                                                        const items = [];
+                                                        let match;
+                                                        while ((match = itemRegex.exec(item.slot.task)) !== null) {
+                                                            items.push({
+                                                                number: match[1],
+                                                                title: match[2].trim(),
+                                                                pages: match[3] || null
+                                                            });
+                                                        }
+                                                        if (items.length > 0) {
+                                                            return (
+                                                                <div className="task-items">
+                                                                    {items.map((taskItem, taskIdx) => (
+                                                                        <div key={taskIdx} className="task-item">
+                                                                            <span className="item-number">{taskItem.number}.</span>
+                                                                            <span className="item-title">{taskItem.title}</span>
+                                                                            {taskItem.pages && <span className="item-pages">{taskItem.pages}</span>}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return <div className="task-item-fallback">{item.slot.task}</div>;
+                                                    })()}
+                                                </div>
+                                                <div className="card-action" onClick={(e) => { e.stopPropagation(); toggleComplete(item.date, item.slot.name, item.slot.completed); }}>
+                                                    {isLoading ? <div className="spinner-xs"></div> : "MARK DONE"}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
