@@ -70,7 +70,7 @@ export function SubjectsView({
 
     return (
         <>
-            <header className="flex flex-col items-center px-gutter pt-2 mb-10">
+            <header className="flex flex-col items-center px-gutter pt-0 mb-10">
                 <h1 className="mission-title text-[11px] text-on-surface-variant tracking-[0.2em] mb-2 uppercase">Subjects Explorer</h1>
                 <div className="w-12 h-[1px] bg-primary/40"></div>
             </header>
