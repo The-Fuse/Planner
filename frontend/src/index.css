@@ -59,6 +59,35 @@
     pointer-events: auto;
     transform: translateX(0);
   }
+
+  /* iOS safe-area glass header — env() MUST be in real CSS, not React inline styles */
+  .sticky-glass-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+  @supports (padding-top: env(safe-area-inset-top)) {
+    .sticky-glass-header {
+      padding-top: calc(env(safe-area-inset-top) + 1rem);
+    }
+  }
+
+  .status-bar-glass {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 0px;
+    z-index: 50;
+    pointer-events: none;
+  }
+  @supports (height: env(safe-area-inset-top)) {
+    .status-bar-glass {
+      height: env(safe-area-inset-top);
+    }
+  }
 }
 
 @layer utilities {

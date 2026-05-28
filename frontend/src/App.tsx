@@ -116,10 +116,7 @@ export default function App() {
             </div>
 
             {/* ── Mobile status bar glass overlay ── */}
-            <div
-                className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#060808]/60 backdrop-blur-lg pointer-events-none"
-                style={{ height: 'env(safe-area-inset-top, 0px)' }}
-            />
+            <div className="md:hidden status-bar-glass bg-[#060808]/60 backdrop-blur-lg" />
 
             {/* ── Content ── */}
             <div className="relative w-full bg-transparent min-h-screen pt-0 md:pt-20 pb-28 md:pb-0">
