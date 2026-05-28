@@ -47,8 +47,13 @@
     transition: all 0.2s ease-in-out;
     transform: translateX(10px);
   }
-  .history-card:focus-within .undo-button,
-  .history-card:active .undo-button,
+  @media (hover: hover) {
+    .history-card:hover .undo-button {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0);
+    }
+  }
   .history-card.is-active .undo-button {
     opacity: 1;
     pointer-events: auto;

@@ -33,8 +33,7 @@ export function HistoryView({
                     return (
                         <div 
                             key={`${id}-${idx}`} 
-                            className={`history-card spatial-glass rounded-2xl p-6 group cursor-pointer relative overflow-hidden ${activeId === id ? 'is-active' : ''}`} 
-                            tabIndex={0}
+                            className={`history-card spatial-glass rounded-2xl p-6 group cursor-pointer relative overflow-hidden ${activeId === id ? 'is-active' : ''}`}
                             onClick={() => setActiveId(activeId === id ? null : id)}
                         >
                             <div className="flex items-center justify-between mb-3">
