@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Slot } from '../interfaces';
 import { TaskContent } from './TaskContent';
 
@@ -10,8 +11,7 @@ export function HistoryView({
     toggle: (date: string, name: string, cur: boolean) => void;
     busy: string | null;
 }) {
-    // Group history by date for better presentation, or just flat list as in original design
-    // The design shows a flat list but with dates on each card.
+    const [activeId, setActiveId] = useState<string | null>(null);
     
     return (
         <>
@@ -31,7 +31,12 @@ export function HistoryView({
                     const isLoading = busy === id;
                     
                     return (
-                        <div key={`${id}-${idx}`} className="history-card spatial-glass rounded-2xl p-6 group cursor-pointer relative overflow-hidden" tabIndex={0}>
+                        <div 
+                            key={`${id}-${idx}`} 
+                            className={`history-card spatial-glass rounded-2xl p-6 group cursor-pointer relative overflow-hidden ${activeId === id ? 'is-active' : ''}`} 
+                            tabIndex={0}
+                            onClick={() => setActiveId(activeId === id ? null : id)}
+                        >
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-3">
                                     <span className="text-[11px] font-light text-on-surface-variant tracking-widest uppercase">
@@ -41,7 +46,10 @@ export function HistoryView({
                                 </div>
                                 <button 
                                     className="undo-button rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-on-surface tracking-[0.2em] uppercase hover:bg-white/10 transition-all w-8 h-8 flex items-center justify-center"
-                                    onClick={() => toggle(item.date, item.slot.name, item.slot.completed)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggle(item.date, item.slot.name, item.slot.completed);
+                                    }}
                                     title="Undo Completion"
                                 >
                                     {isLoading ? (
