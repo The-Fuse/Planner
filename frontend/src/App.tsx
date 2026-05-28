@@ -116,7 +116,7 @@ export default function App() {
             </div>
 
             {/* ── Content ── */}
-            <div className="relative w-full bg-transparent min-h-screen pt-6 md:pt-20 pb-28 md:pb-0">
+            <div className="relative w-full bg-transparent min-h-screen pt-0 md:pt-20 pb-28 md:pb-0">
 
                 <div className="max-w-7xl mx-auto w-full">
                     {view === 'focus'    && <DashboardView today={today} backlog={backlog} toggle={toggle} busy={busy} />}
