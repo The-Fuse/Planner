@@ -1,703 +1,144 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
-import { ChevronLeft, ChevronRight, Moon, Sun, Check, RefreshCw, AlertCircle } from 'lucide-react';
-import Dashboard from './components/Dashboard';
-import './App.css';
+import { DayPlan, Slot, SubjectStats } from './interfaces';
+import { DashboardView } from './components/DashboardView';
+import { SubjectsView } from './components/SubjectsView';
+import { HistoryView } from './components/HistoryView';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://planner-936q.onrender.com';
+const API = import.meta.env.VITE_API_URL || 'https://planner-936q.onrender.com';
 
-interface Slot {
-    name: string;
-    subject: string;
-    task: string;
-    completed: boolean;
-}
-
-interface DayPlan {
-    date: string;
-    day: string;
-    slots: Slot[];
-}
-
-interface SubjectStats {
-    total: number;
-    completed: number;
-}
-
-const QUOTES = [
-    "Start now. Finish strong.",
-    "One task at a time.",
-    "Action beats perfection.",
-    "Do it now.",
-    "Finish what you started.",
-    "Keep going. You're almost there.",
-    "Today's work builds tomorrow's success.",
-    "Small steps. Big results.",
-    "Show up. Do the work.",
-    "Focus. Execute. Repeat.",
-    "Done is better than perfect.",
-    "The best time is now.",
-    "Make today count.",
-    "Discipline equals freedom.",
-    "Work hard. Stay humble.",
-    "Progress over perfection.",
-    "You got this.",
-    "Stay focused. Stay disciplined.",
-    "Every task completed is progress made.",
-    "Trust the process.",
-    "Consistency is key.",
-    "No excuses. Just results.",
-    "Winners finish what they start.",
-    "Stop thinking. Start doing.",
-    "Your future depends on today's work.",
-    "Outwork your doubts.",
-    "Show up every single day.",
-    "Results require relentless effort.",
-    "Be disciplined. Be unstoppable.",
-    "Finish strong today."
-];
-
-function getQuoteForToday() {
-    const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
-    return QUOTES[dayOfYear % QUOTES.length];
-}
-
-function App() {
+export default function App() {
     const [schedule, setSchedule] = useState<DayPlan[]>([]);
-    const [stats, setStats] = useState<{ [key: string]: SubjectStats }>({});
-    const [completedSubjects, setCompletedSubjects] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    // Calculate days until exam (May 24, 2026)
-    const calculateDaysUntilExam = () => {
-        const examDate = new Date('2026-05-24');
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        examDate.setHours(0, 0, 0, 0);
-        const diffTime = examDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays;
-    };
-
-    const daysUntilExam = calculateDaysUntilExam();
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    const fetchData = async () => {
-        try {
-            const [planRes, statsRes] = await Promise.all([
-                axios.get(`${API_BASE_URL}/api/plan`),
-                axios.get(`${API_BASE_URL}/api/stats`)
-            ]);
-            setSchedule(planRes.data);
-            setStats(statsRes.data.stats || statsRes.data);
-            setCompletedSubjects(statsRes.data.completed_subjects || []);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const [view, setView] = useState<'focus' | 'history'>('focus');
-    const [backlog, setBacklog] = useState<{ slot: Slot, date: string }[]>([]);
-    const [history, setHistory] = useState<{ slot: Slot, date: string }[]>([]);
-    const [todayPlan, setTodayPlan] = useState<DayPlan | null>(null);
-    const [upcoming, setUpcoming] = useState<DayPlan[]>([]);
-
-    const [loadingTask, setLoadingTask] = useState<string | null>(null);
+    const [stats, setStats]       = useState<Record<string, SubjectStats>>({});
+    const [loading, setLoading]   = useState(true);
 
     const todayStr = new Date().toISOString().split('T')[0];
 
     useEffect(() => {
-        if (schedule.length > 0) {
-            const bl: { slot: Slot, date: string }[] = [];
-            const hist: { slot: Slot, date: string }[] = [];
-            const upc: DayPlan[] = [];
-            let tPlan: DayPlan | null = null;
-
-            schedule.forEach(day => {
-                if (day.date < todayStr) {
-                    // Past Day
-                    day.slots.forEach(slot => {
-                        if (!slot.completed && slot.task !== 'Revision') {
-                            bl.push({ slot, date: day.date });
-                        } else if (slot.completed) {
-                            hist.push({ slot, date: day.date });
-                        }
-                    });
-                } else if (day.date === todayStr) {
-                    // Today
-                    tPlan = day;
-                } else {
-                    // Future
-                    upc.push(day);
-                }
-            });
-
-            // Sort history by date desc
-            hist.sort((a, b) => b.date.localeCompare(a.date));
-
-            setBacklog(bl);
-            setHistory(hist);
-            setTodayPlan(tPlan);
-            setUpcoming(upc);
-        }
-    }, [schedule, todayStr]);
-
-    const toggleComplete = async (date: string, slotName: string, currentStatus: boolean) => {
-        const taskId = `${date}-${slotName}`;
-        if (loadingTask === taskId) return; // Prevent double clicks
-
-        setLoadingTask(taskId);
-        try {
-            await axios.post(`${API_BASE_URL}/api/mark`, null, {
-                params: { date, slot_name: slotName, completed: !currentStatus }
-            });
-
-            setSchedule(prev => prev.map(day => {
-                if (day.date === date) {
-                    return {
-                        ...day,
-                        slots: day.slots.map(slot => {
-                            if (slot.name === slotName) {
-                                return { ...slot, completed: !currentStatus };
-                            }
-                            return slot;
-                        })
-                    };
-                }
-                return day;
-            }));
-
-            const statsRes = await axios.get(`${API_BASE_URL}/api/stats`);
-            setStats(statsRes.data.stats || statsRes.data);
-            setCompletedSubjects(statsRes.data.completed_subjects || []);
-
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoadingTask(null);
-        }
-    };
-
-    // Theme state - initialize from localStorage for instant loading
-    const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-        const savedTheme = localStorage.getItem('theme');
-        return (savedTheme === 'dark' || savedTheme === 'light') ? savedTheme : 'light';
-    });
-
-    // Apply theme immediately on mount (logic moved out of effect for initial render)
-    useEffect(() => {
-        document.documentElement.setAttribute('data-theme', theme);
-        // Save to localStorage whenever theme changes
-        localStorage.setItem('theme', theme);
-    }, [theme]);
-
-    // Fetch theme preference from backend to sync (only once on mount)
-    useEffect(() => {
-        const fetchTheme = async () => {
-            try {
-                const response = await axios.get(`${API_BASE_URL}/api/preferences/theme`);
-                if (response.data && response.data.value) {
-                    const backendTheme = response.data.value;
-                    if ((backendTheme === 'light' || backendTheme === 'dark') && backendTheme !== theme) {
-                        setTheme(backendTheme);
-                    }
-                }
-            } catch (error) {
-                console.error("Failed to sync theme preference", error);
-            }
-        };
-        fetchTheme();
+        Promise.all([
+            axios.get(`${API}/api/plan`),
+            axios.get(`${API}/api/stats`),
+        ]).then(([p, s]) => {
+            setSchedule(p.data);
+            setStats(s.data.stats || s.data);
+        }).catch(console.error)
+          .finally(() => setLoading(false));
     }, []);
 
-    const toggleTheme = async () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme); // Immediate UI update
+    const { backlog, history, today, upcoming } = useMemo(() => {
+        const bl: { slot: Slot; date: string }[] = [];
+        const hist: { slot: Slot; date: string }[] = [];
+        const upc: DayPlan[] = [];
+        let tp: DayPlan | null = null;
+        
+        if (schedule.length) {
+            schedule.forEach(day => {
+                if (day.date < todayStr) {
+                    day.slots.forEach(s => {
+                        if (!s.completed && s.task !== 'Revision') bl.push({ slot: s, date: day.date });
+                        else if (s.completed) hist.push({ slot: s, date: day.date });
+                    });
+                } else if (day.date === todayStr) tp = day;
+                else upc.push(day);
+            });
+            hist.sort((a, b) => b.date.localeCompare(a.date));
+        }
+        return { backlog: bl, history: hist, today: tp, upcoming: upc };
+    }, [schedule, todayStr]);
+
+    const [busy, setBusy] = useState<string | null>(null);
+    const toggle = async (date: string, name: string, cur: boolean) => {
+        const id = `${date}-${name}`;
+        if (busy === id) return;
+        setBusy(id);
+
+        // Optimistic update
+        setSchedule(prev => prev.map(d => d.date !== date ? d : {
+            ...d, slots: d.slots.map(s => s.name === name ? { ...s, completed: !cur } : s)
+        }));
 
         try {
-            await axios.post(`${API_BASE_URL}/api/preferences`, {
-                key: 'theme',
-                value: newTheme
-            });
-        } catch (error) {
-            console.error("Failed to save theme preference", error);
-        }
+            await axios.post(`${API}/api/mark`, null, { params: { date, slot_name: name, completed: !cur } });
+            const sr = await axios.get(`${API}/api/stats`);
+            setStats(sr.data.stats || sr.data);
+        } catch {
+            // Revert on failure
+            setSchedule(prev => prev.map(d => d.date !== date ? d : {
+                ...d, slots: d.slots.map(s => s.name === name ? { ...s, completed: cur } : s)
+            }));
+        } finally { setBusy(null); }
     };
 
-    // Calculate Subject Progress
-    const getSubjectProgress = () => {
-        // Fallback progress if stats not loaded or empty
-        if (!stats) return [
-            { name: 'Polity', completed: 0, total: 100, percent: 0 },
-            { name: 'History', completed: 0, total: 100, percent: 0 }
-        ];
+    const [view, setView] = useState<'focus' | 'subjects' | 'history'>('focus');
 
-        return Object.keys(stats).map(subj => {
-            const s = stats[subj];
-            const percent = s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0;
-            return { name: subj, completed: s.completed, total: s.total, percent };
-        });
-    };
+    const subjectsList = Object.entries(stats).map(([name, s]) => ({
+        name, 
+        pct: s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0,
+        completed: s.completed,
+        total: s.total,
+    }));
 
-    const subjectProgress = getSubjectProgress();
+    if (loading) return (
+        <div className="flex h-screen items-center justify-center bg-[#060808]">
+            <div className="w-8 h-8 rounded-full border-2 border-primary/20 border-t-primary animate-spin"></div>
+        </div>
+    );
 
-    // Split Backlog by Subject
-    const polityBacklog = backlog.filter(b => b.slot.subject === 'Polity');
-    const historyBacklog = backlog.filter(b => b.slot.subject === 'History');
-    const economyBacklog = backlog.filter(b => b.slot.subject === 'Economy');
-
-    if (loading) return <div className="loading">LOADING</div>;
+    const navItems = [
+        { key: 'focus',    label: 'Focus',    icon: 'event_note' },
+        { key: 'subjects', label: 'Subjects', icon: 'menu_book' },
+        { key: 'history',  label: 'History',  icon: 'history' },
+    ] as const;
 
     return (
-        <div className={`container ${theme}`}>
-            <header className="header">
-                <div className="logo">UPSC PLANNER</div>
-                <div className="header-right">
-                    <nav className="nav-toggle">
+        <div className="relative min-h-screen bg-[#060808] flex flex-col">
+
+            {/* ── Desktop top nav (hidden on mobile) ── */}
+            <div className="hidden md:flex fixed top-0 left-0 right-0 z-50 justify-center pt-5 pointer-events-none">
+                <nav className="backdrop-blur-xl bg-surface/30 border border-white/[0.08] rounded-full flex items-center px-1 py-1 pointer-events-auto shadow-lg">
+                    {navItems.map(({ key, label }) => (
                         <button
-                            className={`nav-btn ${view === 'focus' ? 'active' : ''}`}
-                            onClick={() => setView('focus')}
+                            key={key}
+                            className={`px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] transition-all duration-300 ${
+                                view === key
+                                    ? 'bg-white/[0.08] text-on-surface'
+                                    : 'text-on-surface-variant/35 hover:text-on-surface-variant/60'
+                            }`}
+                            onClick={() => setView(key)}
                         >
-                            FOCUS
+                            {label}
                         </button>
+                    ))}
+                </nav>
+            </div>
+
+            {/* ── Content ── */}
+            <div className="relative w-full bg-transparent min-h-screen overflow-x-hidden pt-6 md:pt-20 pb-28 md:pb-0">
+
+                <div className="max-w-7xl mx-auto w-full">
+                    {view === 'focus'    && <DashboardView today={today} backlog={backlog} toggle={toggle} busy={busy} />}
+                    {view === 'subjects' && <SubjectsView subjects={subjectsList} upcoming={upcoming} toggle={toggle} busy={busy} />}
+                    {view === 'history'  && <HistoryView history={history} toggle={toggle} busy={busy} />}
+                </div>
+            </div>
+
+            {/* ── Mobile bottom nav — Stitch design ── */}
+            <div className="md:hidden fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
+                <nav className="backdrop-blur-xl bg-surface/40 rounded-full flex justify-around items-center border border-white/10 shadow-2xl w-full px-6 py-4 gap-4 pointer-events-auto">
+                    {navItems.map(({ key, label, icon }) => (
                         <button
-                            className={`nav-btn ${view === 'history' ? 'active' : ''}`}
-                            onClick={() => setView('history')}
+                            key={key}
+                            className={`flex flex-col items-center justify-center gap-1 group transition-colors min-w-[64px] bg-transparent border-0 cursor-pointer ${
+                                view === key ? 'text-primary' : 'text-on-surface-variant/50 hover:text-primary'
+                            }`}
+                            onClick={() => setView(key)}
                         >
-                            HISTORY
+                            <span className="material-symbols-outlined text-[24px]">{icon}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
                         </button>
-                    </nav>
-                    <button className="theme-toggle" onClick={toggleTheme}>
-                        {theme === 'light' ? (
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                        ) : (
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-                        )}
-                    </button>
-                </div>
-            </header>
-
-            {view === 'focus' && (
-                <div className="view-focus">
-                    {/* SUBJECT PROGRESS - COMPACT TOP */}
-                    <div className="subject-progress-compact">
-                        {subjectProgress.map(s => (
-                            <div key={s.name} className="subj-prog-item">
-                                <div className="subj-meta-top">
-                                    <span className="subj-name">{s.name}</span>
-                                    <span className="subj-val">{s.percent}% ({s.completed}/{s.total})</span>
-                                </div>
-                                <div className="subj-bar"><div className="subj-fill" style={{ width: `${s.percent}%` }}></div></div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* TODAY SECTION - NOW AT THE TOP */}
-                    {todayPlan && (
-                        <div className="section today-section">
-                            {/* UNIFIED HEADER STYLE */}
-                            <div className="section-header">
-                                <h2 className="section-title">TODAY'S MISSION</h2>
-                                <span className="badge">{daysUntilExam} DAYS LEFT</span>
-                            </div>
-                            <div className="today-card-container">
-                                <div className="today-header">
-                                    <div className="today-date-box">
-                                        <span className="today-num">{todayPlan.date.split('-')[2]}</span>
-                                        <div className="today-month-row">
-                                            <span className="today-month">{new Date(todayPlan.date).toLocaleString('default', { month: 'short' })}</span>
-                                        </div>
-                                    </div>
-                                    <div className="today-right-col">
-                                        <span className="today-day">{todayPlan.day}</span>
-                                        <div className="quote-box">
-                                            "{getQuoteForToday()}"
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="today-progress-container-internal">
-                                    <div
-                                        className="today-progress-bar"
-                                        style={{ width: `${(todayPlan.slots.filter(s => s.completed).length / todayPlan.slots.length) * 100}%` }}
-                                    ></div>
-                                </div>
-                                <div className="today-slots">
-                                    {todayPlan.slots.map((slot) => {
-                                        const taskId = `${todayPlan.date}-${slot.name}`;
-                                        const isLoading = loadingTask === taskId;
-                                        return (
-                                            <div key={slot.name} className={`slot-row ${slot.completed ? 'completed' : ''}`} onClick={() => toggleComplete(todayPlan!.date, slot.name, slot.completed)}>
-                                                <div className="slot-check-col">
-                                                    {isLoading ? (
-                                                        <div className="spinner-sm"></div>
-                                                    ) : (
-                                                        <div className={`checkbox ${slot.completed ? 'checked' : ''}`}></div>
-                                                    )}
-                                                </div>
-                                                <div className="slot-content">
-                                                    <div className="slot-meta">
-                                                        <span className="slot-time">{slot.name}</span>
-                                                        <span className="slot-subj">{slot.subject}</span>
-                                                    </div>
-                                                    <div className="slot-desc">
-                                                        {(() => {
-                                                            // Match pattern: "34. High Court (pp.360-362), 35. Subordinate Courts (pp.363-364)"
-                                                            const itemRegex = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
-                                                            const items = [];
-                                                            let match;
-                                                            while ((match = itemRegex.exec(slot.task)) !== null) {
-                                                                items.push({
-                                                                    number: match[1],
-                                                                    title: match[2].trim(),
-                                                                    pages: match[3] || null
-                                                                });
-                                                            }
-                                                            if (items.length > 0) {
-                                                                return (
-                                                                    <div className="task-items">
-                                                                        {items.map((item, idx) => (
-                                                                            <div key={idx} className="task-item">
-                                                                                <span className="item-number">{item.number}.</span>
-                                                                                <span className="item-title">{item.title}</span>
-                                                                                {item.pages && <span className="item-pages">{item.pages}</span>}
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                );
-                                                            }
-                                                            return <div className="task-item-fallback">{slot.task}</div>;
-                                                        })()}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ECONOMY BACKLOG */}
-                    {economyBacklog.length > 0 && (
-                        <div className="section backlog-section">
-                            <div className="section-header backlog-header">
-                                <h2 className="section-title">ECONOMY BACKLOG</h2>
-                                <span className="badge">
-                                    {(() => {
-                                        const uniqueDays = new Set(economyBacklog.map(item => item.date)).size;
-                                        return `${uniqueDays} ${uniqueDays === 1 ? 'DAY' : 'DAYS'}`;
-                                    })()}
-                                </span>
-                            </div>
-                            <div className="backlog-scroll">
-                                {economyBacklog.map((item, idx) => {
-                                    const taskId = `${item.date}-${item.slot.name}`;
-                                    const isLoading = loadingTask === taskId;
-                                    return (
-                                        <div key={`${item.date}-${idx}`} className="card backlog-card">
-                                            <div className="card-top">
-                                                <span className="card-date">{item.date.split('-')[2]} {new Date(item.date).toLocaleString('default', { month: 'short' })}</span>
-                                                <span className="card-subject">{item.slot.subject}</span>
-                                            </div>
-                                            <div className="b-progress-container-internal">
-                                                <div className="b-progress-bar" style={{ width: '0%' }}></div>
-                                            </div>
-                                            <div className="card-bottom">
-                                                <div className="card-task">
-                                                    {(() => {
-                                                        const itemRegex = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
-                                                        const items = [];
-                                                        let match;
-                                                        while ((match = itemRegex.exec(item.slot.task)) !== null) {
-                                                            items.push({
-                                                                number: match[1],
-                                                                title: match[2].trim(),
-                                                                pages: match[3] || null
-                                                            });
-                                                        }
-                                                        if (items.length > 0) {
-                                                            return (
-                                                                <div className="task-items">
-                                                                    {items.map((taskItem, taskIdx) => (
-                                                                        <div key={taskIdx} className="task-item">
-                                                                            <span className="item-number">{taskItem.number}.</span>
-                                                                            <span className="item-title">{taskItem.title}</span>
-                                                                            {taskItem.pages && <span className="item-pages">{taskItem.pages}</span>}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            );
-                                                        }
-                                                        return <div className="task-item-fallback">{item.slot.task}</div>;
-                                                    })()}
-                                                </div>
-                                                <div className="card-action" onClick={(e) => { e.stopPropagation(); toggleComplete(item.date, item.slot.name, item.slot.completed); }}>
-                                                    {isLoading ? <div className="spinner-xs"></div> : "MARK DONE"}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* POLITY BACKLOG */}
-                    {polityBacklog.length > 0 && (
-                        <div className="section backlog-section">
-                            <div className="section-header backlog-header">
-                                <h2 className="section-title">POLITY BACKLOG</h2>
-                                <span className="badge">
-                                    {(() => {
-                                        const uniqueDays = new Set(polityBacklog.map(item => item.date)).size;
-                                        return `${uniqueDays} ${uniqueDays === 1 ? 'DAY' : 'DAYS'}`;
-                                    })()}
-                                </span>
-                            </div>
-                            <div className="backlog-scroll">
-                                {polityBacklog.map((item, idx) => {
-                                    const taskId = `${item.date}-${item.slot.name}`;
-                                    const isLoading = loadingTask === taskId;
-                                    return (
-                                        <div key={`${item.date}-${idx}`} className="card backlog-card">
-                                            <div className="card-top">
-                                                <span className="card-date">{item.date.split('-')[2]} {new Date(item.date).toLocaleString('default', { month: 'short' })}</span>
-                                                <span className="card-subject">{item.slot.subject}</span>
-                                            </div>
-                                            <div className="b-progress-container-internal">
-                                                <div className="b-progress-bar" style={{ width: '0%' }}></div>
-                                            </div>
-                                            <div className="card-bottom">
-                                                <div className="card-task">
-                                                    {(() => {
-                                                        const itemRegex = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
-                                                        const items = [];
-                                                        let match;
-                                                        while ((match = itemRegex.exec(item.slot.task)) !== null) {
-                                                            items.push({
-                                                                number: match[1],
-                                                                title: match[2].trim(),
-                                                                pages: match[3] || null
-                                                            });
-                                                        }
-                                                        if (items.length > 0) {
-                                                            return (
-                                                                <div className="task-items">
-                                                                    {items.map((taskItem, taskIdx) => (
-                                                                        <div key={taskIdx} className="task-item">
-                                                                            <span className="item-number">{taskItem.number}.</span>
-                                                                            <span className="item-title">{taskItem.title}</span>
-                                                                            {taskItem.pages && <span className="item-pages">{taskItem.pages}</span>}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            );
-                                                        }
-                                                        return <div className="task-item-fallback">{item.slot.task}</div>;
-                                                    })()}
-                                                </div>
-                                                <div className="card-action" onClick={(e) => { e.stopPropagation(); toggleComplete(item.date, item.slot.name, item.slot.completed); }}>
-                                                    {isLoading ? <div className="spinner-xs"></div> : "MARK DONE"}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* HISTORY BACKLOG */}
-                    {historyBacklog.length > 0 && (
-                        <div className="section backlog-section">
-                            <div className="section-header backlog-header">
-                                <h2 className="section-title">HISTORY BACKLOG</h2>
-                                <span className="badge">
-                                    {(() => {
-                                        const uniqueDays = new Set(historyBacklog.map(item => item.date)).size;
-                                        return `${uniqueDays} ${uniqueDays === 1 ? 'DAY' : 'DAYS'}`;
-                                    })()}
-                                </span>
-                            </div>
-                            <div className="backlog-scroll">
-                                {historyBacklog.map((item, idx) => {
-                                    const taskId = `${item.date}-${item.slot.name}`;
-                                    const isLoading = loadingTask === taskId;
-                                    return (
-                                        <div key={`${item.date}-${idx}`} className="card backlog-card">
-                                            <div className="card-top">
-                                                <span className="card-date">{item.date.split('-')[2]} {new Date(item.date).toLocaleString('default', { month: 'short' })}</span>
-                                                <span className="card-subject">{item.slot.subject}</span>
-                                            </div>
-                                            <div className="b-progress-container-internal">
-                                                <div className="b-progress-bar" style={{ width: '0%' }}></div>
-                                            </div>
-                                            <div className="card-bottom">
-                                                <div className="card-task">
-                                                    {(() => {
-                                                        const itemRegex = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
-                                                        const items = [];
-                                                        let match;
-                                                        while ((match = itemRegex.exec(item.slot.task)) !== null) {
-                                                            items.push({
-                                                                number: match[1],
-                                                                title: match[2].trim(),
-                                                                pages: match[3] || null
-                                                            });
-                                                        }
-                                                        if (items.length > 0) {
-                                                            return (
-                                                                <div className="task-items">
-                                                                    {items.map((taskItem, taskIdx) => (
-                                                                        <div key={taskIdx} className="task-item">
-                                                                            <span className="item-number">{taskItem.number}.</span>
-                                                                            <span className="item-title">{taskItem.title}</span>
-                                                                            {taskItem.pages && <span className="item-pages">{taskItem.pages}</span>}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            );
-                                                        }
-                                                        return <div className="task-item-fallback">{item.slot.task}</div>;
-                                                    })()}
-                                                </div>
-                                                <div className="card-action" onClick={(e) => { e.stopPropagation(); toggleComplete(item.date, item.slot.name, item.slot.completed); }}>
-                                                    {isLoading ? <div className="spinner-xs"></div> : "MARK DONE"}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* UPCOMING SECTION */}
-                    {/* UPCOMING SECTION */}
-                    {upcoming.length > 0 && (
-                        <div className="section upcoming-section">
-                            <div className="section-header">
-                                <h2 className="section-title">UPCOMING</h2>
-                                <span className="badge">{upcoming.length} {upcoming.length === 1 ? 'DAY' : 'DAYS'}</span>
-                            </div>
-                            <div className="upcoming-scroll">
-                                {upcoming.map((dayPlan) => {
-                                    const totalSlots = dayPlan.slots.length;
-                                    const completedSlots = dayPlan.slots.filter(s => s.completed).length;
-                                    const progressPercent = totalSlots > 0 ? (completedSlots / totalSlots) * 100 : 0;
-
-                                    return (
-                                        <div key={dayPlan.date} className="upcoming-card">
-                                            <div className="u-header">
-                                                <div className="u-date-group">
-                                                    <span className="u-date">{dayPlan.date.split('-')[2]} {new Date(dayPlan.date).toLocaleString('default', { month: 'short' })}</span>
-                                                </div>
-                                                <span className="u-day">{dayPlan.day}</span>
-                                            </div>
-
-                                            {/* PROGRESS BAR SEPARATOR */}
-                                            <div className="u-progress-container-internal">
-                                                <div
-                                                    className="u-progress-bar"
-                                                    style={{ width: `${progressPercent}%` }}
-                                                ></div>
-                                            </div>
-
-                                            <div className="u-slots">
-                                                {dayPlan.slots.map((slot) => {
-                                                    const taskId = `${dayPlan.date}-${slot.name}`;
-                                                    return (
-                                                        <div
-                                                            key={slot.name}
-                                                            className={`u-slot-item ${slot.completed ? 'completed' : ''}`}
-                                                            onClick={() => toggleComplete(dayPlan.date, slot.name, slot.completed)}
-                                                        >
-                                                            <div className="u-content">
-                                                                <div className="u-slot-subj">{slot.subject} • {slot.name}</div>
-                                                                <div className="u-slot-task">
-                                                                    {(() => {
-                                                                        const itemRegex = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
-                                                                        const items = [];
-                                                                        let match;
-
-                                                                        while ((match = itemRegex.exec(slot.task)) !== null) {
-                                                                            items.push({
-                                                                                number: match[1],
-                                                                                title: match[2].trim(),
-                                                                                pages: match[3] || null
-                                                                            });
-                                                                        }
-
-                                                                        if (items.length > 0) {
-                                                                            return (
-                                                                                <div className="task-items">
-                                                                                    {items.map((taskItem, taskIdx) => (
-                                                                                        <div key={taskIdx} className="task-item">
-                                                                                            <span className="item-number">{taskItem.number}.</span>
-                                                                                            <span className="item-title">{taskItem.title}</span>
-                                                                                            {taskItem.pages && <span className="item-pages">{taskItem.pages}</span>}
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            );
-                                                                        }
-
-                                                                        return <div className="task-item-fallback">{slot.task}</div>;
-                                                                    })()}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {view === 'history' && (
-                <div className="view-history">
-                    <h2 className="section-title">COMPLETED TASKS</h2>
-                    <div className="history-list">
-                        {history.map((item, idx) => {
-                            const taskId = `${item.date}-${item.slot.name}`;
-                            const isLoading = loadingTask === taskId;
-                            return (
-                                <div key={`${item.date}-${idx}`} className="history-row">
-                                    <div className="h-date-col">
-                                        <span className="h-date">{item.date}</span>
-                                    </div>
-                                    <div className="h-content">
-                                        <span className="h-subject">{item.slot.subject}</span>
-                                        <span className="h-task">{item.slot.task}</span>
-                                    </div>
-                                    <div
-                                        className={`h-action ${isLoading ? 'visible' : ''}`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleComplete(item.date, item.slot.name, item.slot.completed);
-                                        }}
-                                    >
-                                        {isLoading ? <div className="spinner-xs dark"></div> : "UNDO"}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                        {history.length === 0 && <div className="empty-state">NO HISTORY YET</div>}
-                    </div>
-                </div>
-            )
-            }
-        </div >
+                    ))}
+                </nav>
+            </div>
+        </div>
     );
 }
-
-export default App;

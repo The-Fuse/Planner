@@ -4,9 +4,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f2f4f7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#060808" media="(prefers-color-scheme: dark)" />
+  <meta name="description" content="Aspirant Pro — UPSC Study Planner with Spatial Glassmorphism" />
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-  <title>UPSC Planner</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="UPSC" />
+  <!-- Preconnect to Google Fonts for faster font loading -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <title>Aspirant Pro — UPSC Planner</title>
+  <!-- Inline critical CSS to prevent FOUC -->
+  <style>
+    html { background: #060808; }
+    [data-theme='light'] { background: #f2f4f7; }
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; }
+    #root { min-height: 100dvh; }
+  </style>
 </head>
 
 <body>

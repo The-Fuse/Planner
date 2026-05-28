@@ -4,7 +4,7 @@ import math
 from data import subjects_data
 
 # Configuration
-START_DATE = datetime.date(2026, 1, 1)
+START_DATE = datetime.date(2026, 5, 25)
 
 # Page Limits
 LIMITS = {
@@ -154,11 +154,10 @@ def generate_schedule():
     # Polity: completed till 344 -> start at 345
     
     waiting_list = [
-        SubjectTracker("Polity", subjects_data["Polity"], start_from_page=345),
-        SubjectTracker("History", subjects_data["History"], start_from_page=372),
+        SubjectTracker("Polity", subjects_data["Polity"]),
+        SubjectTracker("History", subjects_data["History"]),
+        SubjectTracker("Economy", subjects_data["Economy"]),
     ]
-    
-    economy_tracker = SubjectTracker("Economy", subjects_data["Economy"])
     economy_injected = False
     
     # Active subjects
@@ -171,28 +170,14 @@ def generate_schedule():
     
     # Run until both active slots are finished AND no one is waiting
     while True:
-        # Economy injection check: on Feb 12, make Economy the sole focus
-        if current_date == datetime.date(2026, 2, 12) and not economy_injected:
-            # 1. Put current active subjects back in wait list (only if NOT finished)
-            if active_slot1 and not active_slot1.finished:
-                waiting_list.insert(0, active_slot1)
-            if active_slot2 and not active_slot2.finished:
-                waiting_list.insert(0, active_slot2)
-            
-            # 2. Assign Economy to Slot 1, keep Slot 2 empty for total focus
-            active_slot1 = economy_tracker
-            active_slot2 = None
-            economy_injected = True
-        
-        # Economy focus rule definition
-        economy_focus = economy_injected and not economy_tracker.finished
+        economy_focus = False
 
         # Check completion condition
         s1_active = (active_slot1 and not active_slot1.finished)
         s2_active = (active_slot2 and not active_slot2.finished)
         
         unfinished_waiting = any(not s.finished for s in waiting_list)
-        if economy_injected and economy_tracker.finished and not unfinished_waiting:
+        if not s1_active and not s2_active and not unfinished_waiting:
             break
 
         day_name = current_date.strftime("%A")

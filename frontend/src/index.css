@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#060808] text-[#e2e2e2] overflow-x-hidden min-h-screen;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  .spatial-glass {
+    @apply bg-white/[0.03] backdrop-blur-xl border-none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
+  }
+  .spatial-glass:active {
+    transform: scale(0.985);
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .glass-button {
+    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), 0 4px 15px rgba(0,0,0,0.2);
+    border: 0.5px solid rgba(255,255,255,0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .glass-button:active {
+    transform: scale(0.97);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .mission-title {
+    @apply tracking-[0.25em] font-light uppercase;
+  }
+  .ultra-refined-num {
+    @apply font-thin tracking-[-0.05em] leading-[0.8];
+  }
+  .section-divider {
+    height: 0.5px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  }
+  /* Contextual Undo Visibility */
+  .undo-button {
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease-in-out;
+    transform: translateX(10px);
+  }
+  .history-card:focus-within .undo-button,
+  .history-card:active .undo-button,
+  .history-card.is-active .undo-button {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
