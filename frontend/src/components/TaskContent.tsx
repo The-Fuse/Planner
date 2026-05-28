@@ -8,7 +8,7 @@ export function parseItems(task: string) {
     return out;
 }
 
-export function TaskContent({ task, isDone = false, styleType = 'normal' }: { task: string; isDone?: boolean; styleType?: 'normal' | 'compact' | 'backlog' }) {
+export function TaskContent({ task, isDone = false, styleType = 'normal' }: { task: string; isDone?: boolean; styleType?: 'normal' | 'compact' | 'backlog' | 'backlog-compact' }) {
     const items = parseItems(task);
     
     if (items.length > 0) {
@@ -17,10 +17,10 @@ export function TaskContent({ task, isDone = false, styleType = 'normal' }: { ta
                 {items.map((it, i) => (
                     <div key={i} className={`flex justify-between items-start gap-4 group ${isDone ? 'opacity-30' : ''}`}>
                         <div className="flex items-start gap-2.5 overflow-hidden">
-                            {styleType === 'compact' ? (
+                            {styleType === 'compact' || styleType === 'backlog-compact' ? (
                                 <div className="flex gap-2">
-                                    <span className="text-[10px] font-medium text-on-surface/30 tabular-nums tracking-wide pt-[1px]">{it.n}.</span>
-                                    <span className={`text-[10.5px] font-light tracking-wide leading-snug ${isDone ? 'line-through text-on-surface/30' : 'text-on-surface/60'}`}>
+                                    <span className={`text-[10px] font-medium tabular-nums tracking-wide pt-[1px] ${styleType === 'backlog-compact' ? 'text-error/60' : 'text-on-surface/30'}`}>{it.n}.</span>
+                                    <span className={`text-[10.5px] font-light tracking-wide leading-snug ${isDone ? 'line-through text-on-surface/30' : (styleType === 'backlog-compact' ? 'text-on-surface/90' : 'text-on-surface/60')}`}>
                                         {it.t}
                                     </span>
                                 </div>
@@ -38,8 +38,8 @@ export function TaskContent({ task, isDone = false, styleType = 'normal' }: { ta
                             )}
                         </div>
                         {it.pg && (
-                            styleType === 'compact' ? (
-                                <span className={`text-[7.5px] font-medium tracking-[0.2em] uppercase flex-shrink-0 ml-2 mt-[3px] whitespace-nowrap ${isDone ? 'text-on-surface/10' : 'text-on-surface/25'}`}>
+                            styleType === 'compact' || styleType === 'backlog-compact' ? (
+                                <span className={`text-[7.5px] font-medium tracking-[0.2em] uppercase flex-shrink-0 ml-2 mt-[3px] whitespace-nowrap ${isDone ? 'text-on-surface/10' : (styleType === 'backlog-compact' ? 'text-on-surface/50' : 'text-on-surface/25')}`}>
                                     {it.pg}
                                 </span>
                             ) : (
@@ -55,8 +55,8 @@ export function TaskContent({ task, isDone = false, styleType = 'normal' }: { ta
     }
     
     // Fallback for unparsed tasks
-    if (styleType === 'compact') {
-        return <p className={`text-[10.5px] font-light tracking-wide flex-1 leading-snug ${isDone ? 'line-through text-on-surface/30' : 'text-on-surface/60'}`}>{task}</p>;
+    if (styleType === 'compact' || styleType === 'backlog-compact') {
+        return <p className={`text-[10.5px] font-light tracking-wide flex-1 leading-snug ${isDone ? 'line-through text-on-surface/30' : (styleType === 'backlog-compact' ? 'text-on-surface/90' : 'text-on-surface/60')}`}>{task}</p>;
     }
     return <p className={`text-[12px] font-light tracking-wide flex-1 leading-snug ${isDone ? 'line-through opacity-30' : 'text-on-surface/90'}`}>{task}</p>;
 }

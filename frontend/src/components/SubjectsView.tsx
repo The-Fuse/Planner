@@ -82,7 +82,7 @@ export function SubjectsView({
                     <section className="px-gutter">
                         <div className="flex items-center gap-4 mb-8">
                             <h2 className="mission-title text-[11px] text-on-surface-variant flex-shrink-0 uppercase tracking-widest">Core Mastery</h2>
-                            <div className="h-[0.5px] flex-grow bg-white/10"></div>
+                            <div className="h-[0.5px] flex-grow bg-gradient-to-r from-white/10 to-transparent"></div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -162,10 +162,10 @@ export function SubjectsView({
                 {/* ── Upcoming — Horizontal scrolling day cards ── */}
                 {upcoming.length > 0 && (
                     <section>
-                        <div className="px-gutter flex items-center gap-4 mb-6 mt-4">
-                            <h2 className="mission-title text-[11px] text-on-surface-variant flex-shrink-0 uppercase tracking-widest">Upcoming Tasks</h2>
-                            <div className="h-[0.5px] flex-grow bg-white/10"></div>
-                        </div>
+                    <div className="flex items-center gap-4 mb-8 px-gutter">
+                        <h2 className="mission-title text-[11px] text-on-surface-variant flex-shrink-0">Upcoming Tasks</h2>
+                        <div className="h-[0.5px] flex-grow bg-gradient-to-r from-white/10 to-transparent"></div>
+                    </div>
 
                         <div className="flex gap-5 overflow-x-auto no-scrollbar px-gutter scroll-pl-gutter scroll-pr-gutter pt-4 pb-8 snap-x snap-mandatory">
                             {upcoming.slice(0, 10).map((day) => {

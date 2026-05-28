@@ -34,7 +34,9 @@ export function HistoryView({
                         <div key={`${id}-${idx}`} className="history-card spatial-glass rounded-2xl p-6 group cursor-pointer relative overflow-hidden" tabIndex={0}>
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-3">
-                                    <span className="text-[11px] font-light text-on-surface-variant tracking-widest uppercase">{item.date}</span>
+                                    <span className="text-[11px] font-light text-on-surface-variant tracking-widest uppercase">
+                                        {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </span>
                                     <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-on-surface-variant opacity-40">{item.slot.subject}</span>
                                 </div>
                                 <button 

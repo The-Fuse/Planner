@@ -158,11 +158,11 @@ export function DashboardView({
                 </>
             )}
 
-            {backlog.length > 0 && (
+            {backlog.length > 0 ? (
                 <section className="space-y-8 mt-16 pb-12">
                     <div className="flex items-center gap-4 mb-8 px-4 sm:px-gutter">
                         <h2 className="mission-title text-[11px] text-on-surface-variant flex-shrink-0">Subject Backlogs</h2>
-                        <div className="h-[0.5px] flex-grow bg-white/10"></div>
+                        <div className="h-[0.5px] flex-grow bg-gradient-to-r from-white/10 to-transparent"></div>
                     </div>
 
                     <div className="space-y-8">
@@ -186,18 +186,25 @@ export function DashboardView({
                                         return (
                                             <div
                                                 key={`${item.date}-${idx}`}
-                                                className={`flex-shrink-0 w-[300px] rounded-[24px] p-6 flex flex-col justify-between snap-start relative overflow-hidden transition-all duration-300 hover:-translate-y-2 group bg-white/[0.02] border-none hover:bg-white/[0.05]`}
+                                                className="flex-shrink-0 w-[300px] rounded-[24px] p-6 flex flex-col gap-6 snap-start relative overflow-hidden transition-all duration-300 hover:-translate-y-1"
+                                                style={{
+                                                    background: 'linear-gradient(145deg, rgba(239, 68, 68, 0.06) 0%, rgba(255, 255, 255, 0.015) 100%)',
+                                                    border: '0.5px solid rgba(255,255,255,0.08)',
+                                                    borderLeft: `3px solid ${color.glowBorder}`,
+                                                    boxShadow: 'inset 0 0.5px 0 rgba(255,255,255,0.08), 0 8px 32px -8px rgba(0,0,0,0.3)',
+                                                }}
                                             >
-                                                {/* Subtle internal glow */}
-                                                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-50 pointer-events-none rounded-[24px]"></div>
+                                                {/* Subtle top glow based on the subject's color */}
+                                                <div
+                                                    className="absolute top-0 left-0 right-0 h-24 opacity-60 pointer-events-none"
+                                                    style={{
+                                                        background: `radial-gradient(ellipse at 50% -20%, ${color.glowBorder} 0%, transparent 70%)`
+                                                    }}
+                                                />
 
-                                                <div className="relative z-10 flex-1 flex flex-col">
-                                                    {/* Header */}
-                                                    <div className="flex justify-between items-center mb-5 pb-4 border-b border-white/[0.06]">
-                                                        <div className="text-left">
-                                                            <p className="text-[9px] font-bold text-on-surface-variant/40 tracking-[0.35em] uppercase leading-relaxed">{new Date(item.date).toLocaleString('default', { weekday: 'short' }).toUpperCase()}</p>
-                                                            <p className="text-[9px] font-light text-on-surface-variant/40 tracking-widest leading-relaxed uppercase">{`${new Date(item.date).toLocaleString('default', { month: 'short' }).toUpperCase()} ${String(new Date(item.date).getDate()).padStart(2, '0')}`}</p>
-                                                        </div>
+                                                {/* Date header and check button group */}
+                                                <div className="flex flex-col gap-3 relative z-10">
+                                                    <div className="flex justify-between items-center">
                                                         <button
                                                             className={`w-7 h-7 rounded-full border border-white/10 flex items-center justify-center transition-all duration-300 group-hover:bg-white/5 group-hover:border-white/20 hover:!bg-white/10 hover:!border-white/30 hover:scale-110 cursor-pointer p-0 bg-transparent ${isLoading ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'} ${color.text}`}
                                                             onClick={() => toggle(item.date, item.slot.name, item.slot.completed)}
@@ -209,10 +216,19 @@ export function DashboardView({
                                                                 <span className="material-symbols-outlined text-[14px]">check</span>
                                                             )}
                                                         </button>
+                                                        
+                                                        <div className="text-right">
+                                                            <p className="text-[9px] font-bold text-on-surface-variant/30 tracking-[0.35em] uppercase leading-relaxed">{new Date(item.date).toLocaleString('default', { weekday: 'short' }).toUpperCase()}</p>
+                                                            <p className="text-[9px] font-light text-on-surface-variant/25 tracking-widest leading-relaxed uppercase">{`${new Date(item.date).toLocaleString('default', { month: 'short' }).toUpperCase()} ${String(new Date(item.date).getDate()).padStart(2, '0')}`}</p>
+                                                        </div>
                                                     </div>
-                                                    {/* Task Content */}
-                                                    <div className="flex-1 overflow-y-auto no-scrollbar pl-1 opacity-80 group-hover:opacity-100 transition-opacity duration-300">
-                                                        <TaskContent task={item.slot.task} styleType="compact" />
+                                                    <div className="h-[0.5px] w-full bg-white/[0.04]"></div>
+                                                </div>
+
+                                                {/* Task Content */}
+                                                <div className="flex-1 relative z-10 cursor-pointer transition-transform duration-300 hover:translate-x-1" onClick={() => toggle(item.date, item.slot.name, item.slot.completed)}>
+                                                    <div className="transition-opacity duration-300">
+                                                        <TaskContent task={item.slot.task} styleType="backlog-compact" />
                                                     </div>
                                                 </div>
                                             </div>
@@ -222,6 +238,12 @@ export function DashboardView({
                             </div>
                         ))}
                     </div>
+                </section>
+            ) : (
+                <section className="mt-16 pb-12 flex flex-col items-center justify-center text-center opacity-50 px-4">
+                    <span className="material-symbols-outlined text-[32px] text-on-surface-variant/30 mb-4">task_alt</span>
+                    <h2 className="text-[11px] font-bold tracking-[0.3em] text-on-surface-variant uppercase mb-1">Zero Backlogs</h2>
+                    <p className="text-[10px] text-on-surface-variant/60 font-light tracking-wide">You're completely caught up. Great job!</p>
                 </section>
             )}
         </main>
