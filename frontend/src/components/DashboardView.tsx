@@ -33,7 +33,7 @@ export function DashboardView({
     };
 
     return (
-        <main className="mx-auto pt-2 pb-20 max-w-[800px]">
+        <main className="mx-auto pt-0 pb-20 max-w-[800px]">
             {today && (
                 <>
                     <div className="flex flex-col items-center px-gutter mb-6">
@@ -217,7 +217,7 @@ export function DashboardView({
                                                 </div>
 
                                                 {/* Task Content */}
-                                                <div className="flex-1 relative z-10 cursor-pointer transition-transform duration-300 hover:translate-x-1" onClick={() => toggle(item.date, item.slot.name, item.slot.completed)}>
+                                                <div className="flex-1 relative z-10">
                                                     <div className="transition-opacity duration-300">
                                                         <TaskContent task={item.slot.task} styleType="backlog-compact" />
                                                     </div>
