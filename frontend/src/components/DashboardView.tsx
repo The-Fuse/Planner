@@ -48,7 +48,7 @@ export function DashboardView({
                         <div className="p-10 pb-6">
                             <div className="flex justify-between items-start">
                                 <div className="flex items-baseline gap-2 relative">
-                                    <span className="text-8xl ultra-refined-num text-on-surface">
+                                    <span className="text-7xl ultra-refined-num text-on-surface">
                                         {String(new Date(today.date).getDate()).padStart(2, '0')}
                                     </span>
                                     <span
