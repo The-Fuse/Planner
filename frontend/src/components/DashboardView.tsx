@@ -36,10 +36,10 @@ export function DashboardView({
         <main className="mx-auto pt-0 pb-20 max-w-[800px]">
             {today && (
                 <>
-                    <div className="flex flex-col items-center px-gutter mb-6">
+                    <header className="md:static sticky top-0 z-40 flex flex-col items-center justify-center w-full bg-[#060808]/60 backdrop-blur-lg py-4 mb-6 md:bg-transparent md:backdrop-blur-none transition-all">
                         <h1 className="mission-title text-[11px] text-on-surface-variant mb-2">Today's Mission</h1>
                         <div className="w-12 h-[1px] bg-primary/40"></div>
-                    </div>
+                    </header>
 
                     <section className="spatial-glass sm:rounded-xl mx-0 sm:mx-gutter mb-8">
                         <div className="p-10 pb-6">

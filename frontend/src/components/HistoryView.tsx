@@ -15,7 +15,7 @@ export function HistoryView({
     
     return (
         <>
-            <header className="flex flex-col items-center px-gutter pt-0 mb-8">
+            <header className="md:static sticky top-0 z-40 flex flex-col items-center justify-center w-full bg-[#060808]/60 backdrop-blur-lg py-4 mb-6 md:bg-transparent md:backdrop-blur-none transition-all">
                 <h1 className="mission-title text-[11px] text-on-surface-variant mb-2">Completed Tasks</h1>
                 <div className="w-12 h-[1px] bg-primary/40"></div>
             </header>

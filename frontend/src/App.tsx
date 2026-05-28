@@ -71,6 +71,9 @@ export default function App() {
 
     const [view, setView] = useState<'focus' | 'subjects' | 'history'>('focus');
 
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [view]);
     const subjectsList = Object.entries(stats).map(([name, s]) => ({
         name, 
         pct: s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0,
@@ -113,7 +116,7 @@ export default function App() {
             </div>
 
             {/* ── Content ── */}
-            <div className="relative w-full bg-transparent min-h-screen overflow-x-hidden pt-6 md:pt-20 pb-28 md:pb-0">
+            <div className="relative w-full bg-transparent min-h-screen pt-6 md:pt-20 pb-28 md:pb-0">
 
                 <div className="max-w-7xl mx-auto w-full">
                     {view === 'focus'    && <DashboardView today={today} backlog={backlog} toggle={toggle} busy={busy} />}
