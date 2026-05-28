@@ -23,13 +23,13 @@ export function DashboardView({
     const blHistory = backlog.filter(b => b.slot.subject === 'History');
     const blEconomy = backlog.filter(b => b.slot.subject === 'Economy');
 
-    const colorMap: Record<string, { text: string, bgFill: string, shadowBox: string }> = {
-        Polity: { text: 'text-primary', bgFill: 'bg-primary', shadowBox: 'rgba(173, 198, 255, 0.2)' },
-        History: { text: 'text-secondary', bgFill: 'bg-secondary', shadowBox: 'rgba(194, 193, 255, 0.2)' },
-        Economy: { text: 'text-tertiary', bgFill: 'bg-tertiary', shadowBox: 'rgba(104, 211, 255, 0.2)' },
-        Geography: { text: 'text-primary', bgFill: 'bg-primary', shadowBox: 'rgba(173, 198, 255, 0.2)' },
-        Science: { text: 'text-secondary', bgFill: 'bg-secondary', shadowBox: 'rgba(194, 193, 255, 0.2)' },
-        CurrentAffairs: { text: 'text-tertiary', bgFill: 'bg-tertiary', shadowBox: 'rgba(104, 211, 255, 0.2)' },
+    const colorMap: Record<string, { text: string, bgFill: string, shadowBox: string, glowBorder: string }> = {
+        Polity: { text: 'text-primary', bgFill: 'bg-primary', shadowBox: 'rgba(173, 198, 255, 0.2)', glowBorder: 'rgba(75,142,255,0.25)' },
+        History: { text: 'text-secondary', bgFill: 'bg-secondary', shadowBox: 'rgba(194, 193, 255, 0.2)', glowBorder: 'rgba(194,193,255,0.25)' },
+        Economy: { text: 'text-tertiary', bgFill: 'bg-tertiary', shadowBox: 'rgba(104, 211, 255, 0.2)', glowBorder: 'rgba(104,211,255,0.25)' },
+        Geography: { text: 'text-primary', bgFill: 'bg-primary', shadowBox: 'rgba(173, 198, 255, 0.2)', glowBorder: 'rgba(75,142,255,0.25)' },
+        Science: { text: 'text-secondary', bgFill: 'bg-secondary', shadowBox: 'rgba(194, 193, 255, 0.2)', glowBorder: 'rgba(194,193,255,0.25)' },
+        CurrentAffairs: { text: 'text-tertiary', bgFill: 'bg-tertiary', shadowBox: 'rgba(104, 211, 255, 0.2)', glowBorder: 'rgba(104,211,255,0.25)' },
     };
 
     return (
@@ -186,22 +186,13 @@ export function DashboardView({
                                         return (
                                             <div
                                                 key={`${item.date}-${idx}`}
-                                                className="flex-shrink-0 w-[300px] rounded-[24px] p-6 flex flex-col gap-6 snap-start relative overflow-hidden transition-all duration-300 hover:-translate-y-1"
+                                                className="flex-shrink-0 w-[300px] rounded-[24px] p-6 flex flex-col gap-5 snap-start relative overflow-hidden transition-all duration-300 hover:-translate-y-1 backdrop-blur-xl"
                                                 style={{
-                                                    background: 'linear-gradient(145deg, rgba(239, 68, 68, 0.06) 0%, rgba(255, 255, 255, 0.015) 100%)',
-                                                    border: '0.5px solid rgba(255,255,255,0.08)',
-                                                    borderLeft: `3px solid ${color.glowBorder}`,
-                                                    boxShadow: 'inset 0 0.5px 0 rgba(255,255,255,0.08), 0 8px 32px -8px rgba(0,0,0,0.3)',
+                                                    background: 'rgba(255, 255, 255, 0.03)',
+                                                    border: '0.5px solid rgba(255, 255, 255, 0.08)',
+                                                    boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 8px 32px -8px rgba(0,0,0,0.2)',
                                                 }}
                                             >
-                                                {/* Subtle top glow based on the subject's color */}
-                                                <div
-                                                    className="absolute top-0 left-0 right-0 h-24 opacity-60 pointer-events-none"
-                                                    style={{
-                                                        background: `radial-gradient(ellipse at 50% -20%, ${color.glowBorder} 0%, transparent 70%)`
-                                                    }}
-                                                />
-
                                                 {/* Date header and check button group */}
                                                 <div className="flex flex-col gap-3 relative z-10">
                                                     <div className="flex justify-between items-center">
@@ -216,13 +207,13 @@ export function DashboardView({
                                                                 <span className="material-symbols-outlined text-[14px]">check</span>
                                                             )}
                                                         </button>
-                                                        
+
                                                         <div className="text-right">
                                                             <p className="text-[9px] font-bold text-on-surface-variant/30 tracking-[0.35em] uppercase leading-relaxed">{new Date(item.date).toLocaleString('default', { weekday: 'short' }).toUpperCase()}</p>
                                                             <p className="text-[9px] font-light text-on-surface-variant/25 tracking-widest leading-relaxed uppercase">{`${new Date(item.date).toLocaleString('default', { month: 'short' }).toUpperCase()} ${String(new Date(item.date).getDate()).padStart(2, '0')}`}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="h-[0.5px] w-full bg-white/[0.04]"></div>
+                                                    <div className="h-[0.5px] w-full bg-white/10"></div>
                                                 </div>
 
                                                 {/* Task Content */}
