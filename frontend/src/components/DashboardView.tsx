@@ -36,7 +36,10 @@ export function DashboardView({
         <main className="mx-auto pt-0 pb-20 max-w-[800px]">
             {today && (
                 <>
-                    <header className="md:static sticky top-0 z-40 flex flex-col items-center justify-center w-full bg-[#060808]/60 backdrop-blur-lg pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 mb-6 md:bg-transparent md:backdrop-blur-none md:py-4 transition-all">
+                    <header 
+                        className="md:static sticky top-0 z-40 flex flex-col items-center justify-center w-full bg-[#060808]/60 backdrop-blur-lg pb-4 mb-6 md:bg-transparent md:backdrop-blur-none transition-all"
+                        style={{ paddingTop: 'max(env(safe-area-inset-top), 1rem)' }}
+                    >
                         <h1 className="mission-title text-[11px] text-on-surface-variant mb-2">Today's Mission</h1>
                         <div className="w-12 h-[1px] bg-primary/40"></div>
                     </header>
