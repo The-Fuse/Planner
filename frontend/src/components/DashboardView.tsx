@@ -19,17 +19,23 @@ export function DashboardView({
         return `${dt.getDate()} ${dt.toLocaleString('default', { month: 'short' })}`;
     };
 
-    const blPolity = backlog.filter(b => b.slot.subject === 'Polity');
-    const blHistory = backlog.filter(b => b.slot.subject === 'History');
-    const blEconomy = backlog.filter(b => b.slot.subject === 'Economy');
+    // Dynamically group backlogs by subject
+    const backlogBySubject: Record<string, typeof backlog> = {};
+    backlog.forEach(b => {
+        const subj = b.slot.subject;
+        if (!backlogBySubject[subj]) backlogBySubject[subj] = [];
+        backlogBySubject[subj].push(b);
+    });
 
+    const defaultColor = { text: 'text-primary', bgFill: 'bg-primary', shadowBox: 'rgba(173, 198, 255, 0.2)', glowBorder: 'rgba(75,142,255,0.25)' };
     const colorMap: Record<string, { text: string, bgFill: string, shadowBox: string, glowBorder: string }> = {
         Polity: { text: 'text-primary', bgFill: 'bg-primary', shadowBox: 'rgba(173, 198, 255, 0.2)', glowBorder: 'rgba(75,142,255,0.25)' },
         History: { text: 'text-secondary', bgFill: 'bg-secondary', shadowBox: 'rgba(194, 193, 255, 0.2)', glowBorder: 'rgba(194,193,255,0.25)' },
         Economy: { text: 'text-tertiary', bgFill: 'bg-tertiary', shadowBox: 'rgba(104, 211, 255, 0.2)', glowBorder: 'rgba(104,211,255,0.25)' },
-        Geography: { text: 'text-primary', bgFill: 'bg-primary', shadowBox: 'rgba(173, 198, 255, 0.2)', glowBorder: 'rgba(75,142,255,0.25)' },
-        Science: { text: 'text-secondary', bgFill: 'bg-secondary', shadowBox: 'rgba(194, 193, 255, 0.2)', glowBorder: 'rgba(194,193,255,0.25)' },
-        CurrentAffairs: { text: 'text-tertiary', bgFill: 'bg-tertiary', shadowBox: 'rgba(104, 211, 255, 0.2)', glowBorder: 'rgba(104,211,255,0.25)' },
+        'Western Philosophy': { text: 'text-primary', bgFill: 'bg-primary', shadowBox: 'rgba(173, 198, 255, 0.2)', glowBorder: 'rgba(75,142,255,0.25)' },
+        'Indian Philosophy': { text: 'text-secondary', bgFill: 'bg-secondary', shadowBox: 'rgba(194, 193, 255, 0.2)', glowBorder: 'rgba(194,193,255,0.25)' },
+        Ethics: { text: 'text-tertiary', bgFill: 'bg-tertiary', shadowBox: 'rgba(104, 211, 255, 0.2)', glowBorder: 'rgba(104,211,255,0.25)' },
+        'Art & Culture': { text: 'text-primary', bgFill: 'bg-primary', shadowBox: 'rgba(255, 180, 171, 0.2)', glowBorder: 'rgba(255,180,171,0.25)' },
     };
 
     return (
@@ -166,14 +172,13 @@ export function DashboardView({
                     </div>
 
                     <div className="space-y-8">
-                        {[
-                            { items: blPolity, label: 'Polity Backlog', color: colorMap.Polity },
-                            { items: blHistory, label: 'History Backlog', color: colorMap.History },
-                            { items: blEconomy, label: 'Economy Backlog', color: colorMap.Economy }
-                        ].map(({ items, label, color }) => items.length > 0 && (
-                            <div key={label} className="space-y-6">
+                        {Object.entries(backlogBySubject).map(([subject, items]) => {
+                            if (items.length === 0) return null;
+                            const color = colorMap[subject] || defaultColor;
+                            return (
+                            <div key={subject} className="space-y-6">
                                 <div className="flex items-center justify-between px-4 sm:px-gutter">
-                                    <h3 className={`text-[10px] font-bold ${color.text} tracking-[0.3em] uppercase`}>{label}</h3>
+                                    <h3 className={`text-[10px] font-bold ${color.text} tracking-[0.3em] uppercase`}>{subject} Backlog</h3>
                                     {(() => {
                                         const days = new Set(items.map(i => i.date)).size;
                                         return <span className="px-3 py-1 rounded-sm bg-error/10 border border-error/20 text-[9px] font-bold text-error tracking-[0.2em] uppercase">{days} {days === 1 ? 'Day' : 'Days'} Delay</span>;
@@ -202,7 +207,7 @@ export function DashboardView({
                                                             title="Mark as Complete"
                                                         >
                                                             {isLoading ? (
-                                                                <div className="w-3.5 h-3.5 rounded-full border-[1.5px] border-current/20 border-t-current animate-spin"></div>
+                                                                <div className="w-3.5 h-3.5 rounded-full border-[1.5px] border-white/20 border-t-white animate-spin"></div>
                                                             ) : (
                                                                 <span className="material-symbols-outlined text-[14px]">check</span>
                                                             )}
@@ -227,7 +232,8 @@ export function DashboardView({
                                     })}
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </section>
             ) : (

@@ -81,20 +81,20 @@ def mark_complete(date: str, slot_name: str, completed: bool):
 
 @app.get("/api/stats")
 def get_stats():
-    stats = {
-        "Polity": {"total": 0, "completed": 0},
-        "History": {"total": 0, "completed": 0},
-        "Economy": {"total": 0, "completed": 0}
-    }
+    # Build stats dynamically from whatever subjects appear in the schedule
+    stats = {}
 
     for day in schedule_cache:
         for slot in day['slots']:
             subj = slot['subject']
-            if subj in stats:
-                stats[subj]["total"] += 1
-                key = f"{day['date']}_{slot['name']}"
-                if completion_status.get(key, False):
-                    stats[subj]["completed"] += 1
+            if subj in ("Revision", "Buffer"):
+                continue
+            if subj not in stats:
+                stats[subj] = {"total": 0, "completed": 0}
+            stats[subj]["total"] += 1
+            key = f"{day['date']}_{slot['name']}"
+            if completion_status.get(key, False):
+                stats[subj]["completed"] += 1
 
     completed_subjects = [subj for subj, s in stats.items() if s["total"] > 0 and s["completed"] == s["total"]]
     return {

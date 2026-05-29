@@ -144,5 +144,80 @@ subjects_data = {
         {"chapter": "11. Banking System in India", "start": 115, "end": 137, "hardness": 4.7},
         {"chapter": "12. International Financial Institutions", "start": 138, "end": 150, "hardness": 4.4},
         {"chapter": "13. Insurance in India", "start": 151, "end": 156, "hardness": 3.2}
+    ],
+    
+    "Western Philosophy": [
+        {"chapter": "1. The Nature of Greek Philosophy", "start": 1, "end": 30, "hardness": 2.0},
+        {"chapter": "2. Greek System (Sophists, Socrates, Plato, Aristotle)", "start": 31, "end": 113, "hardness": 3.0},
+        {"chapter": "3. Semi-Socratic and Greco-Roman Ethics", "start": 114, "end": 140, "hardness": 2.0},
+        {"chapter": "4. Medieval Philosophy", "start": 141, "end": 178, "hardness": 3.0},
+        {"chapter": "5. Summary of Important Topics in Greek & Medieval Philosophy", "start": 179, "end": 190, "hardness": 2.0},
+        {"chapter": "1. Francis Bacon (1561-1626)", "start": 193, "end": 198, "hardness": 1.0},
+        {"chapter": "2. Rene Descartes (1596-1650)", "start": 199, "end": 218, "hardness": 3.0},
+        {"chapter": "3. Benedict de Spinoza (1632-1677)", "start": 219, "end": 244, "hardness": 4.0},
+        {"chapter": "4. Gottfried Wilhelm Leibnitz (1646-1716)", "start": 245, "end": 264, "hardness": 4.0},
+        {"chapter": "5. John Locke (1632-1704)", "start": 265, "end": 289, "hardness": 2.0},
+        {"chapter": "6. George Berkeley (1685-1753)", "start": 290, "end": 313, "hardness": 3.0},
+        {"chapter": "7. David Hume (1711-1776)", "start": 314, "end": 329, "hardness": 3.0},
+        {"chapter": "8. Immanuel Kant (1724-1804)", "start": 330, "end": 399, "hardness": 5.0},
+        {"chapter": "9. George Wilhelm Friedrich Hegel (1770-1831)", "start": 400, "end": 452, "hardness": 5.0},
+        {"chapter": "10. Francis Herbert Bradley (1846-1924)", "start": 453, "end": 538, "hardness": 5.0}
+    ],
+
+    "Indian Philosophy": [
+        {"chapter": "1. General Introduction", "start": 1, "end": 51, "hardness": 2.0},
+        {"chapter": "2. The Cārvāka Philosophy", "start": 52, "end": 67, "hardness": 2.0},
+        {"chapter": "3. The Jaina Philosophy", "start": 68, "end": 105, "hardness": 3.0},
+        {"chapter": "4. The Bauddha Philosophy", "start": 106, "end": 148, "hardness": 4.0},
+        {"chapter": "5. The Nyāya Philosophy", "start": 149, "end": 210, "hardness": 5.0},
+        {"chapter": "6. The Vaiśeṣika Philosophy", "start": 211, "end": 236, "hardness": 4.0},
+        {"chapter": "7. The Sāṅkhya Philosophy", "start": 237, "end": 270, "hardness": 4.0},
+        {"chapter": "8. The Yoga Philosophy", "start": 271, "end": 289, "hardness": 3.0},
+        {"chapter": "9. The Mīmāṁsā Philosophy", "start": 290, "end": 316, "hardness": 4.0},
+        {"chapter": "10. The Vedānta Philosophy", "start": 317, "end": 398, "hardness": 5.0}
+    ],
+
+    "Ethics": [
+        {"chapter": "1: Ethics and Human Interface", "start": 7, "end": 44, "hardness": 3.0},
+        {"chapter": "2: Attitude", "start": 45, "end": 70, "hardness": 3.0},
+        {"chapter": "3: Aptitude and Foundational Values for Civil Service", "start": 71, "end": 90, "hardness": 2.0},
+        {"chapter": "4: Emotional Intelligence", "start": 91, "end": 98, "hardness": 2.0},
+        {"chapter": "5: Contributions of Moral Thinkers and Philosophers from India and World", "start": 99, "end": 117, "hardness": 3.0},
+        {"chapter": "6: Public/Civil Service Values and Ethics in Public Administration", "start": 118, "end": 161, "hardness": 4.0},
+        {"chapter": "7: Probity in Governance", "start": 162, "end": 209, "hardness": 4.0}
+    ],
+
+    "Art & Culture": [
+        {"chapter": "1. Prehistoric Cultures in India", "start": 3, "end": 13, "hardness": 2.0},
+        {"chapter": "2. Indian Architecture", "start": 14, "end": 90, "hardness": 4.0},
+        {"chapter": "3. Sculpture and Pottery", "start": 91, "end": 106, "hardness": 3.0},
+        {"chapter": "4. Edicts and Inscriptions", "start": 107, "end": 128, "hardness": 3.0},
+        {"chapter": "5. Coins in India", "start": 129, "end": 138, "hardness": 3.0},
+        {"chapter": "6. Legendary Cities of India", "start": 139, "end": 151, "hardness": 2.0},
+        {"chapter": "7. Indian Paintings", "start": 152, "end": 185, "hardness": 3.0},
+        {"chapter": "8. Indian Handicrafts", "start": 186, "end": 205, "hardness": 2.0},
+        {"chapter": "9. Geographical Indications", "start": 206, "end": 212, "hardness": 2.0},
+        {"chapter": "10. Indian Music", "start": 215, "end": 238, "hardness": 4.0},
+        {"chapter": "11. Indian Dance", "start": 239, "end": 256, "hardness": 3.0},
+        {"chapter": "12. Indian Theatre, Puppetry, Circus, Martial Arts and Sports Forms", "start": 257, "end": 277, "hardness": 2.0},
+        {"chapter": "13. Indian Cinema", "start": 278, "end": 282, "hardness": 1.0},
+        {"chapter": "14. Languages and Scripts", "start": 285, "end": 302, "hardness": 3.0},
+        {"chapter": "15. Indian Literature", "start": 303, "end": 348, "hardness": 4.0},
+        {"chapter": "16. UNESCO World Heritage Sites", "start": 351, "end": 384, "hardness": 3.0},
+        {"chapter": "17. UNESCO's List of Intangible Cultural Heritage", "start": 349, "end": 350, "hardness": 2.0},
+        {"chapter": "18. Religion in India", "start": 369, "end": 384, "hardness": 3.0},
+        {"chapter": "19. Buddhism and Jainism", "start": 385, "end": 415, "hardness": 4.0},
+        {"chapter": "20. Bhakti and Sufi Traditions", "start": 416, "end": 434, "hardness": 3.0},
+        {"chapter": "21. Schools of Philosophy", "start": 435, "end": 441, "hardness": 4.0},
+        {"chapter": "22. Fairs in India", "start": 442, "end": 445, "hardness": 1.0},
+        {"chapter": "23. Festivals in India", "start": 446, "end": 461, "hardness": 2.0},
+        {"chapter": "24. Education in India", "start": 462, "end": 468, "hardness": 2.0},
+        {"chapter": "25. Science and Technology Through the Ages", "start": 469, "end": 482, "hardness": 3.0},
+        {"chapter": "26. Calendar Forms", "start": 483, "end": 489, "hardness": 3.0},
+        {"chapter": "27. Cultural Institutions in India", "start": 490, "end": 498, "hardness": 2.0},
+        {"chapter": "28. Awards and Honours", "start": 499, "end": 503, "hardness": 1.0},
+        {"chapter": "29. Law and Culture", "start": 504, "end": 509, "hardness": 2.0},
+        {"chapter": "30. Trade, Traders and Cultural Exchange", "start": 510, "end": 520, "hardness": 3.0},
+        {"chapter": "31. India Through the Eyes of Foreign Travellers", "start": 521, "end": 542, "hardness": 2.0}
     ]
 }

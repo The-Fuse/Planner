@@ -1,5 +1,5 @@
 export function parseItems(task: string) {
-    const re = /(\d+)\.\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
+    const re = /(\d+)[.:]\s*(.*?)\s*\((pp\.[^)]+)\)(?:,\s*)?/g;
     const out: { n: string; t: string; pg: string | null }[] = [];
     let m: RegExpExecArray | null;
     while ((m = re.exec(task)) !== null) {

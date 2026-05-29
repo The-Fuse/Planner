@@ -4,7 +4,7 @@ import math
 from data import subjects_data
 
 # Configuration
-START_DATE = datetime.date(2026, 5, 25)
+START_DATE = datetime.date(2026, 6, 1)
 
 # Page Limits
 LIMITS = {
@@ -149,60 +149,58 @@ class SubjectTracker:
         return ", ".join(desc_parts)
 
 def generate_schedule():
-    # Initialize Trackers with progress overrides
-    # History: completed till 371 -> start at 372
-    # Polity: completed till 344 -> start at 345
-    
-    waiting_list = [
-        SubjectTracker("Polity", subjects_data["Polity"]),
-        SubjectTracker("History", subjects_data["History"]),
-        SubjectTracker("Economy", subjects_data["Economy"]),
-    ]
-    economy_injected = False
-    
-    # Active subjects
-    active_slot1 = waiting_list.pop(0) if waiting_list else None
-    active_slot2 = waiting_list.pop(0) if waiting_list else None
-    
-    schedule = []
-    
-    current_date = START_DATE
-    
-    # Run until both active slots are finished AND no one is waiting
-    while True:
-        economy_focus = False
+    # Slot 1: Western Philosophy -> Indian Philosophy
+    # Slot 2: Ethics -> Art & Culture
+    # Each slot has a successor that takes over when the current subject finishes.
 
-        # Check completion condition
+    # Define slot pipelines: each slot has an ordered list of subjects
+    slot1_pipeline = [
+        SubjectTracker("Western Philosophy", subjects_data["Western Philosophy"]),
+        SubjectTracker("Indian Philosophy", subjects_data["Indian Philosophy"]),
+    ]
+    slot2_pipeline = [
+        SubjectTracker("Ethics", subjects_data["Ethics"]),
+        SubjectTracker("Art & Culture", subjects_data["Art & Culture"]),
+    ]
+
+    # Active subjects — start with the first in each pipeline
+    active_slot1 = slot1_pipeline.pop(0)
+    active_slot2 = slot2_pipeline.pop(0)
+
+    schedule = []
+    current_date = START_DATE
+
+    while True:
+        # Promote successor if current slot subject is finished
+        if (not active_slot1 or active_slot1.finished) and slot1_pipeline:
+            active_slot1 = slot1_pipeline.pop(0)
+        if (not active_slot2 or active_slot2.finished) and slot2_pipeline:
+            active_slot2 = slot2_pipeline.pop(0)
+
+        # Check completion: both slots done and no successors left
         s1_active = (active_slot1 and not active_slot1.finished)
         s2_active = (active_slot2 and not active_slot2.finished)
-        
-        unfinished_waiting = any(not s.finished for s in waiting_list)
-        if not s1_active and not s2_active and not unfinished_waiting:
+        if not s1_active and not s2_active:
             break
 
         day_name = current_date.strftime("%A")
         is_weekend = day_name in ["Saturday", "Sunday"]
-        
+
         day_plan = {
             "date": current_date.isoformat(),
             "day": day_name,
             "slots": []
         }
-        
+
         if not is_weekend:
-            # Weekday: Morning (Slot 1), Evening (Slot 2)
-            
+            # ── Weekday: Morning (Slot 1), Evening (Slot 2) ──
             morning_hardness = 0.0
 
-            # Slot 1
-            # Keep refilling active_slot1 if it's finished and we have more in waiting_list
-            while (not active_slot1 or active_slot1.finished) and waiting_list:
-                active_slot1 = waiting_list.pop(0)
-
+            # Slot 1 (Morning)
             if active_slot1 and not active_slot1.finished:
                 morning_hardness = active_slot1.chapters[active_slot1.current_chapter_idx].get('hardness', 1.0)
-                base_cap = LIMITS["Morning_Polity"] if active_slot1.name == "Polity" else LIMITS["Morning_Default"]
-                
+                base_cap = LIMITS["Morning_Default"]
+
                 other_h_val = None
                 if active_slot2 and not active_slot2.finished:
                     other_h_val = active_slot2.chapters[active_slot2.current_chapter_idx].get('hardness', 1.0)
@@ -219,61 +217,47 @@ def generate_schedule():
                 morning_hardness = 0.0
 
             # Slot 2 (Evening)
-            if not economy_focus:
-                # Keep refilling active_slot2 if it's finished and we have more in waiting_list
-                while (not active_slot2 or active_slot2.finished) and waiting_list:
-                    active_slot2 = waiting_list.pop(0)
-
-                if active_slot2 and not active_slot2.finished:
-                    limit = calculate_limit(active_slot2, "Evening", other_hardness_value=morning_hardness)
-                    task = active_slot2.get_next_chunk(limit)
-                    if task:
-                        day_plan["slots"].append({"name": "Evening", "subject": active_slot2.name, "task": task})
-                    else:
-                        day_plan["slots"].append({"name": "Evening", "subject": "Revision", "task": "Subject Revision"})
+            if active_slot2 and not active_slot2.finished:
+                limit = calculate_limit(active_slot2, "Evening", other_hardness_value=morning_hardness)
+                task = active_slot2.get_next_chunk(limit)
+                if task:
+                    day_plan["slots"].append({"name": "Evening", "subject": active_slot2.name, "task": task})
                 else:
                     day_plan["slots"].append({"name": "Evening", "subject": "Revision", "task": "Subject Revision"})
+            else:
+                day_plan["slots"].append({"name": "Evening", "subject": "Revision", "task": "Subject Revision"})
 
         else:
-            # Weekend: Block 1 (Subj 1), Block 2 (Subj 2), Block 3 (Balance)
-            
-            # Block 1
-            while (not active_slot1 or active_slot1.finished) and waiting_list:
-                active_slot1 = waiting_list.pop(0)
+            # ── Weekend: Block 1 & 2 (Slot 1 subject), Block 3 (Slot 2 subject) ──
 
+            # Block 1 — Slot 1 subject
             if active_slot1 and not active_slot1.finished:
-                base_cap = LIMITS["Weekend_Polity"] if active_slot1.name == "Polity" else LIMITS["Weekend_Default"]
+                base_cap = LIMITS["Weekend_Default"]
                 limit = calculate_limit(active_slot1, "WeekendBlock", base_cap_override=base_cap)
                 task = active_slot1.get_next_chunk(limit)
                 if task:
                     day_plan["slots"].append({"name": "Block 1", "subject": active_slot1.name, "task": task})
-                else:
-                    if (active_slot2 and not active_slot2.finished):
-                        day_plan["slots"].append({"name": "Block 1", "subject": "Buffer", "task": "Revision"})
-            
-            # Block 2
-            if not economy_focus:
-                while (not active_slot2 or active_slot2.finished) and waiting_list:
-                    active_slot2 = waiting_list.pop(0)
+            else:
+                day_plan["slots"].append({"name": "Block 1", "subject": "Buffer", "task": "Revision"})
 
-                if active_slot2 and not active_slot2.finished:
-                    limit = calculate_limit(active_slot2, "WeekendBlock", base_cap_override=LIMITS["Weekend_Default"])
-                    task = active_slot2.get_next_chunk(limit)
-                    if task:
-                        day_plan["slots"].append({"name": "Block 2", "subject": active_slot2.name, "task": task})
-                else:
-                    if (active_slot1 and not active_slot1.finished):
-                        day_plan["slots"].append({"name": "Block 2", "subject": "Buffer", "task": "Revision"})
-            
-            # Block 3
-            target_for_block3 = active_slot2 if (active_slot2 and not active_slot2.finished) else active_slot1
-            
-            if target_for_block3 and not target_for_block3.finished:
-                 limit = calculate_limit(target_for_block3, "WeekendBlock", base_cap_override=LIMITS["Weekend_Default"])
-                 task = target_for_block3.get_next_chunk(limit)
-                 if task:
-                    day_plan["slots"].append({"name": "Block 3", "subject": target_for_block3.name, "task": task})
-        
+            # Block 2 — Slot 1 subject (continued)
+            if active_slot1 and not active_slot1.finished:
+                limit = calculate_limit(active_slot1, "WeekendBlock", base_cap_override=LIMITS["Weekend_Default"])
+                task = active_slot1.get_next_chunk(limit)
+                if task:
+                    day_plan["slots"].append({"name": "Block 2", "subject": active_slot1.name, "task": task})
+            else:
+                day_plan["slots"].append({"name": "Block 2", "subject": "Buffer", "task": "Revision"})
+
+            # Block 3 — Slot 2 subject
+            if active_slot2 and not active_slot2.finished:
+                limit = calculate_limit(active_slot2, "WeekendBlock", base_cap_override=LIMITS["Weekend_Default"])
+                task = active_slot2.get_next_chunk(limit)
+                if task:
+                    day_plan["slots"].append({"name": "Block 3", "subject": active_slot2.name, "task": task})
+            else:
+                day_plan["slots"].append({"name": "Block 3", "subject": "Buffer", "task": "Revision"})
+
         schedule.append(day_plan)
         current_date += datetime.timedelta(days=1)
 

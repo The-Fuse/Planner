@@ -58,6 +58,42 @@ export function SubjectsView({
             glowBorder: 'rgba(104,211,255,0.25)',
             accent: 'rgba(104,211,255,0.15)',
         },
+        'Western Philosophy': {
+            text: 'text-primary',
+            bgFill: 'bg-primary',
+            stroke: '#adc6ff',
+            strokeTrack: 'rgba(173,198,255,0.08)',
+            glowBox: 'rgba(75,142,255,0.08)',
+            glowBorder: 'rgba(75,142,255,0.25)',
+            accent: 'rgba(173,198,255,0.15)',
+        },
+        'Indian Philosophy': {
+            text: 'text-secondary',
+            bgFill: 'bg-secondary',
+            stroke: '#c2c1ff',
+            strokeTrack: 'rgba(194,193,255,0.08)',
+            glowBox: 'rgba(194,193,255,0.08)',
+            glowBorder: 'rgba(194,193,255,0.25)',
+            accent: 'rgba(194,193,255,0.15)',
+        },
+        Ethics: {
+            text: 'text-tertiary',
+            bgFill: 'bg-tertiary',
+            stroke: '#68d3ff',
+            strokeTrack: 'rgba(104,211,255,0.08)',
+            glowBox: 'rgba(104,211,255,0.08)',
+            glowBorder: 'rgba(104,211,255,0.25)',
+            accent: 'rgba(104,211,255,0.15)',
+        },
+        'Art & Culture': {
+            text: 'text-primary',
+            bgFill: 'bg-primary',
+            stroke: '#ffb4ab',
+            strokeTrack: 'rgba(255,180,171,0.08)',
+            glowBox: 'rgba(255,180,171,0.08)',
+            glowBorder: 'rgba(255,180,171,0.25)',
+            accent: 'rgba(255,180,171,0.15)',
+        },
     };
 
     // SVG ring constants
@@ -79,13 +115,13 @@ export function SubjectsView({
 
                 {/* ── Core Mastery — Subject cards with ring progress ── */}
                 {subjects.length > 0 && (
-                    <section className="px-gutter">
-                        <div className="flex items-center gap-4 mb-8">
+                    <section>
+                        <div className="flex items-center gap-4 mb-8 px-gutter">
                             <h2 className="mission-title text-[11px] text-on-surface-variant flex-shrink-0 uppercase tracking-widest">Core Mastery</h2>
                             <div className="h-[0.5px] flex-grow bg-gradient-to-r from-white/10 to-transparent"></div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="flex flex-col sm:flex-row gap-5 sm:overflow-x-auto no-scrollbar px-gutter sm:scroll-pl-gutter sm:scroll-pr-gutter pt-2 pb-6 sm:snap-x sm:snap-mandatory">
                             {subjects.map(s => {
                                 const cm = colorMap[s.name] || colorMap.Polity;
                                 const offset = RING_CIRCUMFERENCE - (s.pct / 100) * RING_CIRCUMFERENCE;
@@ -93,7 +129,7 @@ export function SubjectsView({
                                 return (
                                     <div
                                         key={s.name}
-                                        className="group relative rounded-[20px] p-5 overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
+                                        className="flex-shrink-0 w-full sm:w-[320px] sm:snap-start group relative rounded-[20px] p-5 overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
                                         style={{
                                             background: 'rgba(255,255,255,0.04)',
                                             border: '0.5px solid rgba(255,255,255,0.1)',
@@ -143,8 +179,8 @@ export function SubjectsView({
                                             </div>
 
                                             {/* Subject info */}
-                                            <div className="flex flex-col gap-1.5 min-w-0">
-                                                <span className={`text-[11px] font-bold ${cm.text} tracking-[0.2em] uppercase leading-none`}>
+                                            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                                                <span className={`text-[11px] font-bold ${cm.text} tracking-widest uppercase truncate`}>
                                                     {s.name}
                                                 </span>
                                                 <span className="text-[10px] font-medium text-on-surface/30 tabular-nums tracking-wider leading-none">
@@ -168,7 +204,7 @@ export function SubjectsView({
                     </div>
 
                         <div className="flex gap-5 overflow-x-auto no-scrollbar px-gutter scroll-pl-gutter scroll-pr-gutter pt-4 pb-8 snap-x snap-mandatory">
-                            {upcoming.slice(0, 10).map((day) => {
+                            {upcoming.map((day) => {
                                 const MAX_SLOTS = 4;
                                 const slots = day.slots.slice(0, MAX_SLOTS);
                                 const extraSlots = day.slots.length - MAX_SLOTS;
@@ -204,36 +240,26 @@ export function SubjectsView({
                                             <div className="h-[0.5px] w-full bg-white/[0.04]"></div>
                                         </div>
 
-                                        {/* Slots grouped by subject */}
+                                        {/* Slots rendered individually */}
                                         <div className="space-y-6 relative z-10 pt-1">
-                                            {Object.entries(
-                                                slots.reduce((acc, slot) => {
-                                                    if (!acc[slot.subject]) acc[slot.subject] = [];
-                                                    acc[slot.subject].push(slot);
-                                                    return acc;
-                                                }, {} as Record<string, typeof slots>)
-                                            ).map(([subject, subjectSlots]) => {
-                                                const cm = colorMap[subject] || colorMap.Polity;
-                                                const allCompleted = subjectSlots.every(s => s.completed);
-                                                
+                                            {slots.map(slot => {
+                                                const cm = colorMap[slot.subject] || colorMap.Polity;
+
                                                 return (
-                                                    <div key={subject} className="flex flex-col gap-3">
+                                                    <div key={slot.name} className="flex flex-col gap-3">
                                                         <div className="flex items-center gap-2.5">
-                                                            <span className={`flex-shrink-0 w-1 h-1 rounded-full transition-all duration-300 ${cm.bgFill} ${allCompleted ? 'opacity-20' : 'opacity-60'}`}></span>
-                                                            <p className={`text-[9px] font-medium text-on-surface/40 tracking-[0.25em] uppercase leading-none mt-[1px] ${allCompleted ? 'line-through opacity-30' : ''}`}>
-                                                                {subject}
+                                                            <span className={`flex-shrink-0 w-1 h-1 rounded-full transition-all duration-300 ${cm.bgFill} ${slot.completed ? 'opacity-20' : 'opacity-60'}`}></span>
+                                                            <p className={`text-[9px] font-medium text-on-surface/40 tracking-[0.25em] uppercase leading-none mt-[1px] ${slot.completed ? 'line-through opacity-30' : ''}`}>
+                                                                {slot.subject}
                                                             </p>
                                                         </div>
                                                         <div className="flex flex-col gap-3 pl-4 border-l-[0.5px] border-white/[0.05] ml-1.5 mt-2 py-1">
-                                                            {subjectSlots.map(slot => (
-                                                                <div
-                                                                    key={slot.name}
-                                                                    className="cursor-pointer transition-transform duration-300 hover:translate-x-1 group"
-                                                                    onClick={() => toggle(day.date, slot.name, slot.completed)}
-                                                                >
-                                                                    <TaskContent task={slot.task} isDone={slot.completed} styleType="compact" />
-                                                                </div>
-                                                            ))}
+                                                            <div
+                                                                className="cursor-pointer transition-transform duration-300 hover:translate-x-1 group"
+                                                                onClick={() => toggle(day.date, slot.name, slot.completed)}
+                                                            >
+                                                                <TaskContent task={slot.task} isDone={slot.completed} styleType="compact" />
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 );
