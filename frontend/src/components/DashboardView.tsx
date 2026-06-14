@@ -1,6 +1,62 @@
 import { DayPlan, Slot } from '../interfaces';
 import { TaskContent } from './TaskContent';
 import { motion, LayoutGroup } from 'framer-motion';
+import { useMemo } from 'react';
+
+// Motivational thoughts that rotate daily — short & punchy
+const DAILY_THOUGHTS = [
+    "Finish what you started.",
+    "Outwork yesterday's version of you.",
+    "Excuses don't pass exams.",
+    "One more chapter. One step closer.",
+    "Grind now. Celebrate later.",
+    "Discipline > motivation.",
+    "Your future self is watching.",
+    "No shortcuts. Only reps.",
+    "Today's pain, tomorrow's power.",
+    "Stay locked in.",
+    "Results require repetition.",
+    "You owe yourself this effort.",
+    "Burn the backup plan.",
+    "Pages today, power tomorrow.",
+    "Read. Revise. Repeat. Rise.",
+    "Be the hardest worker in the room.",
+    "Prove them wrong. Quietly.",
+    "Small steps. Massive results.",
+    "Don't stop until you're proud.",
+    "Average effort, average outcome.",
+    "Champions train when no one watches.",
+    "Own the process.",
+    "Turn the page. Literally.",
+    "Consistency is your superpower.",
+    "You're closer than you think.",
+    "Make today count.",
+    "Doubt less. Do more.",
+    "The grind is the shortcut.",
+    "Zero excuses. Full effort.",
+    "Stack the small wins.",
+    "Fall in love with the work.",
+    "Your only competition is yesterday.",
+    "Do the hard thing first.",
+    "Stay hungry. Stay focused.",
+    "This page won't read itself.",
+    "Earn your rest.",
+    "Progress over perfection.",
+    "Silence the noise. Study.",
+    "Every page is a brick. Build.",
+    "You chose this. Now own it.",
+];
+
+/** Pick a thought deterministically based on the date string (YYYY-MM-DD) */
+function getDailyThought(dateStr: string): string {
+    // Simple hash: sum of char codes × day-of-year-ish value
+    let hash = 0;
+    for (let i = 0; i < dateStr.length; i++) {
+        hash = ((hash << 5) - hash + dateStr.charCodeAt(i)) | 0;
+    }
+    const index = Math.abs(hash) % DAILY_THOUGHTS.length;
+    return DAILY_THOUGHTS[index];
+}
 
 export function DashboardView({
     today,
@@ -13,6 +69,12 @@ export function DashboardView({
     toggle: (date: string, name: string, cur: boolean) => void;
     busy: string | null;
 }) {
+    // Pick today's motivational thought based on the date
+    const dailyThought = useMemo(
+        () => today ? getDailyThought(today.date) : '',
+        [today?.date]
+    );
+
     // Helper to format backlog dates
     const fmtDate = (d: string) => {
         const dt = new Date(d);
@@ -65,7 +127,7 @@ export function DashboardView({
                                     <span className="px-6 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-light text-on-surface tracking-[0.4em] uppercase">
                                         {today.day}
                                     </span>
-                                    <p className="italic text-on-surface-variant/40 text-right text-sm">"Finish what you started."</p>
+                                    <p className="italic text-on-surface-variant/40 text-right text-sm">"{dailyThought}"</p>
                                 </div>
                             </div>
                             <div className="mt-10 section-divider w-full"></div>
