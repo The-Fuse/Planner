@@ -63,6 +63,10 @@ scheduler.start()
 atexit.register(lambda: scheduler.shutdown(wait=False))
 
 
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
+
 @app.get("/api/plan")
 def get_plan():
     result = copy.deepcopy(schedule_cache)
