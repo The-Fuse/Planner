@@ -70,12 +70,8 @@ export default {
         "unit": "8px"
       },
       fontFamily: {
-        "body-lg": ["Inter", "sans-serif"],
-        "display-lg-mobile": ["Inter", "sans-serif"],
-        "display-lg": ["Inter", "sans-serif"],
-        "headline-md": ["Inter", "sans-serif"],
-        "body-md": ["Inter", "sans-serif"],
-        "label-sm": ["Inter", "sans-serif"]
+        "sans": ["Manrope", "system-ui", "sans-serif"],
+        "display": ["Space Grotesk", "Manrope", "sans-serif"]
       },
       fontSize: {
         "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],

@@ -8,6 +8,13 @@ export function parseItems(task: string) {
     return out;
 }
 
+/** First reading title, "+n" if the block has more */
+export function summarizeTask(task: string) {
+    const items = parseItems(task);
+    if (!items.length) return task;
+    return items.length > 1 ? `${items[0].t}  +${items.length - 1}` : items[0].t;
+}
+
 export function TaskContent({ task, isDone = false, styleType = 'normal' }: { task: string; isDone?: boolean; styleType?: 'normal' | 'compact' | 'backlog' | 'backlog-compact' }) {
     const items = parseItems(task);
     
@@ -19,13 +26,13 @@ export function TaskContent({ task, isDone = false, styleType = 'normal' }: { ta
                         <div className="flex items-start gap-2.5 overflow-hidden">
                             {styleType === 'compact' || styleType === 'backlog-compact' ? (
                                 <div className="flex gap-2">
-                                    <span className={`text-[10px] font-medium tabular-nums tracking-wide pt-[1px] ${styleType === 'backlog-compact' ? 'text-error/60' : 'text-on-surface/30'}`}>{it.n}.</span>
-                                    <span className={`text-[10.5px] font-light tracking-wide leading-snug ${isDone ? 'line-through text-on-surface/30' : (styleType === 'backlog-compact' ? 'text-on-surface/90' : 'text-on-surface/60')}`}>
+                                    <span className={`text-[12px] font-medium tabular-nums pt-[1px] ${styleType === 'backlog-compact' ? 'text-on-surface/35' : 'text-on-surface/30'}`}>{it.n}.</span>
+                                    <span className={`text-[13px] font-normal leading-relaxed ${isDone ? 'line-through text-on-surface/30' : (styleType === 'backlog-compact' ? 'text-on-surface/90' : 'text-on-surface/70')}`}>
                                         {it.t}
                                     </span>
                                 </div>
                             ) : (
-                                <span className={`text-[12px] font-light tracking-wide flex-1 leading-snug ${isDone ? 'line-through text-on-surface' : 'text-on-surface/90'}`}>
+                                <span className={`text-[14px] font-normal flex-1 leading-relaxed ${isDone ? 'line-through text-on-surface' : 'text-on-surface/90'}`}>
                                     {styleType === 'backlog' ? (
                                         <>
                                             <span className="ultra-refined-num text-sm opacity-40 mr-1.5">{it.n}.</span>
@@ -39,11 +46,11 @@ export function TaskContent({ task, isDone = false, styleType = 'normal' }: { ta
                         </div>
                         {it.pg && (
                             styleType === 'compact' || styleType === 'backlog-compact' ? (
-                                <span className={`text-[7.5px] font-medium tracking-[0.2em] uppercase flex-shrink-0 ml-2 mt-[3px] whitespace-nowrap ${isDone ? 'text-on-surface/10' : (styleType === 'backlog-compact' ? 'text-on-surface/50' : 'text-on-surface/25')}`}>
+                                <span className={`text-[10px] font-medium tracking-wide flex-shrink-0 ml-2 mt-[3px] whitespace-nowrap tabular-nums ${isDone ? 'text-on-surface/15' : (styleType === 'backlog-compact' ? 'text-on-surface/50' : 'text-on-surface/35')}`}>
                                     {it.pg}
                                 </span>
                             ) : (
-                                <span className={`px-2 py-0.5 rounded-md bg-surface-bright/20 border border-white/5 text-[8px] font-bold tracking-[0.1em] uppercase flex-shrink-0 ml-3 whitespace-nowrap ${isDone ? 'text-on-surface/30' : 'text-on-surface/70'}`}>
+                                <span className={`text-[10px] font-medium tracking-wide flex-shrink-0 ml-3 mt-[3px] whitespace-nowrap tabular-nums ${isDone ? 'text-on-surface/25' : 'text-on-surface/45'}`}>
                                     {it.pg}
                                 </span>
                             )
@@ -56,7 +63,7 @@ export function TaskContent({ task, isDone = false, styleType = 'normal' }: { ta
     
     // Fallback for unparsed tasks
     if (styleType === 'compact' || styleType === 'backlog-compact') {
-        return <p className={`text-[10.5px] font-light tracking-wide flex-1 leading-snug ${isDone ? 'line-through text-on-surface/30' : (styleType === 'backlog-compact' ? 'text-on-surface/90' : 'text-on-surface/60')}`}>{task}</p>;
+        return <p className={`text-[13px] font-normal flex-1 leading-relaxed ${isDone ? 'line-through text-on-surface/30' : (styleType === 'backlog-compact' ? 'text-on-surface/90' : 'text-on-surface/70')}`}>{task}</p>;
     }
-    return <p className={`text-[12px] font-light tracking-wide flex-1 leading-snug ${isDone ? 'line-through opacity-30' : 'text-on-surface/90'}`}>{task}</p>;
+    return <p className={`text-[14px] font-normal flex-1 leading-relaxed ${isDone ? 'line-through opacity-30' : 'text-on-surface/90'}`}>{task}</p>;
 }

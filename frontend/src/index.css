@@ -5,59 +5,90 @@
 @layer base {
   body {
     @apply bg-[#060808] text-[#e2e2e2] overflow-x-hidden min-h-screen;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Manrope', system-ui, sans-serif;
   }
 }
 
 @layer components {
-  .spatial-glass {
-    @apply bg-white/[0.03] backdrop-blur-xl border-none;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  /* ── Minimal glass material ──
+     One quiet layer: flat translucency, a single hairline top edge,
+     soft lift. The ambient background provides the faint chroma. */
+  .spatial-glass,
+  .glass-card {
+    position: relative;
+    border: none;
+    background: rgba(255, 255, 255, 0.035);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),   /* hairline top edge */
+      0 8px 24px -16px rgba(0, 0, 0, 0.4);       /* soft lift */
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
   }
   .spatial-glass:active {
     transform: scale(0.985);
-    background: rgba(255, 255, 255, 0.04);
-  }
-  .glass-button {
-    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
-    box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), 0 4px 15px rgba(0,0,0,0.2);
-    border: 0.5px solid rgba(255,255,255,0.1);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .glass-button:active {
-    transform: scale(0.97);
-    background: rgba(255, 255, 255, 0.04);
   }
 
-  .mission-title {
-    @apply tracking-[0.25em] font-light uppercase;
+  /* Small glass pill — for chips and stat badges */
+  .glass-chip {
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* ── Ambient light fields ──
+     Fixed low-opacity color gradients behind everything; they give
+     the glass blur real chroma to pick up. Pure gradients (no
+     filter: blur) so they cost almost nothing to composite. */
+  .ambient-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .ambient-blob {
+    position: absolute;
+    will-change: transform;
+  }
+  .ambient-blob--one {
+    width: 90vmax;
+    height: 90vmax;
+    top: -45vmax;
+    left: -30vmax;
+    background: radial-gradient(circle, rgba(75, 142, 255, 0.05) 0%, transparent 60%);
+    animation: ambient-drift-a 60s ease-in-out infinite alternate;
+  }
+  .ambient-blob--two {
+    width: 80vmax;
+    height: 80vmax;
+    bottom: -40vmax;
+    right: -25vmax;
+    background: radial-gradient(circle, rgba(123, 108, 255, 0.04) 0%, transparent 60%);
+    animation: ambient-drift-b 75s ease-in-out infinite alternate;
+  }
+  .ambient-blob--three {
+    width: 60vmax;
+    height: 60vmax;
+    top: 30%;
+    left: 45%;
+    background: radial-gradient(circle, rgba(19, 156, 199, 0.03) 0%, transparent 60%);
+    animation: ambient-drift-a 90s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes ambient-drift-a {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(6vmax, 4vmax, 0); }
+  }
+  @keyframes ambient-drift-b {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(-5vmax, -6vmax, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ambient-blob { animation: none; }
   }
   .ultra-refined-num {
     @apply font-thin tracking-[-0.05em] leading-[0.8];
-  }
-  .section-divider {
-    height: 0.5px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-  }
-  /* Contextual Undo Visibility */
-  .undo-button {
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.2s ease-in-out;
-    transform: translateX(10px);
-  }
-  @media (hover: hover) {
-    .history-card:hover .undo-button {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateX(0);
-    }
-  }
-  .history-card.is-active .undo-button {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateX(0);
   }
 
   /* iOS safe-area glass header — env() MUST be in real CSS, not React inline styles */

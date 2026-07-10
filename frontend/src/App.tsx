@@ -1,9 +1,9 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { DayPlan, Slot, SubjectStats } from './interfaces';
-import { DashboardView } from './components/DashboardView';
-import { SubjectsView } from './components/SubjectsView';
-import { HistoryView } from './components/HistoryView';
+import { TodayView } from './components/TodayView';
+import { ProgressView, DayStat } from './components/ProgressView';
 
 const API = import.meta.env.VITE_API_URL || 'https://planner-936q.onrender.com';
 
@@ -25,12 +25,14 @@ export default function App() {
           .finally(() => setLoading(false));
     }, []);
 
-    const { backlog, history, today, upcoming } = useMemo(() => {
+    const { backlog, history, today, upcoming, streak, pastDays } = useMemo(() => {
         const bl: { slot: Slot; date: string }[] = [];
         const hist: { slot: Slot; date: string }[] = [];
         const upc: DayPlan[] = [];
+        const ds: DayStat[] = [];
+        const pd: DayPlan[] = [];
         let tp: DayPlan | null = null;
-        
+
         if (schedule.length) {
             schedule.forEach(day => {
                 if (day.date < todayStr) {
@@ -40,13 +42,47 @@ export default function App() {
                     });
                 } else if (day.date === todayStr) tp = day;
                 else upc.push(day);
+
+                if (day.date <= todayStr && day.slots.length) {
+                    ds.push({
+                        date: day.date,
+                        done: day.slots.filter(s => s.completed).length,
+                        total: day.slots.length,
+                    });
+                    pd.push(day);
+                }
             });
             hist.sort((a, b) => b.date.localeCompare(a.date));
         }
-        return { backlog: bl, history: hist, today: tp, upcoming: upc };
+
+        // Streak: consecutive fully-completed days counting back from today.
+        // An unfinished today doesn't break the streak — the day isn't over yet.
+        ds.sort((a, b) => a.date.localeCompare(b.date));
+        let current = 0;
+        for (let i = ds.length - 1; i >= 0; i--) {
+            const full = ds[i].done === ds[i].total;
+            if (ds[i].date === todayStr) {
+                if (full) current++;
+                continue;
+            }
+            if (full) current++;
+            else break;
+        }
+        let best = 0, run = 0;
+        ds.forEach(s => {
+            if (s.done === s.total) { run++; if (run > best) best = run; }
+            else if (s.date !== todayStr) run = 0;
+        });
+
+        pd.sort((a, b) => a.date.localeCompare(b.date));
+        return { backlog: bl, history: hist, today: tp, upcoming: upc, streak: { current, best }, pastDays: pd };
     }, [schedule, todayStr]);
 
     const [busy, setBusy] = useState<string | null>(null);
+    // Mistake-proofing: after marking complete, offer a transient Undo
+    const [undoInfo, setUndoInfo] = useState<{ date: string; name: string } | null>(null);
+    const undoTimer = useRef<number | undefined>(undefined);
+
     const toggle = async (date: string, name: string, cur: boolean) => {
         const id = `${date}-${name}`;
         if (busy === id) return;
@@ -61,6 +97,15 @@ export default function App() {
             await axios.post(`${API}/api/mark`, null, { params: { date, slot_name: name, completed: !cur } });
             const sr = await axios.get(`${API}/api/stats`);
             setStats(sr.data.stats || sr.data);
+
+            window.clearTimeout(undoTimer.current);
+            if (!cur) {
+                // Just marked complete — keep an undo window open
+                setUndoInfo({ date, name });
+                undoTimer.current = window.setTimeout(() => setUndoInfo(null), 6000);
+            } else {
+                setUndoInfo(null);
+            }
         } catch {
             // Revert on failure
             setSchedule(prev => prev.map(d => d.date !== date ? d : {
@@ -69,13 +114,22 @@ export default function App() {
         } finally { setBusy(null); }
     };
 
-    const [view, setView] = useState<'focus' | 'subjects' | 'history'>('focus');
+    const undoLast = () => {
+        if (!undoInfo) return;
+        const { date, name } = undoInfo;
+        window.clearTimeout(undoTimer.current);
+        setUndoInfo(null);
+        toggle(date, name, true);
+    };
+
+    const [view, setView] = useState<'today' | 'progress'>('today');
 
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [view]);
+
     const subjectsList = Object.entries(stats).map(([name, s]) => ({
-        name, 
+        name,
         pct: s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0,
         completed: s.completed,
         total: s.total,
@@ -88,13 +142,19 @@ export default function App() {
     );
 
     const navItems = [
-        { key: 'focus',    label: 'Focus',    icon: 'event_note' },
-        { key: 'subjects', label: 'Subjects', icon: 'menu_book' },
-        { key: 'history',  label: 'History',  icon: 'history' },
+        { key: 'today',    label: 'Today',    icon: 'today' },
+        { key: 'progress', label: 'Progress', icon: 'monitoring' },
     ] as const;
 
     return (
         <div className="relative min-h-screen bg-[#060808] flex flex-col">
+
+            {/* ── Ambient light fields — give the glass something to refract ── */}
+            <div aria-hidden className="ambient-bg">
+                <div className="ambient-blob ambient-blob--one" />
+                <div className="ambient-blob ambient-blob--two" />
+                <div className="ambient-blob ambient-blob--three" />
+            </div>
 
             {/* ── Desktop top nav (hidden on mobile) ── */}
             <div className="hidden md:flex fixed top-0 left-0 right-0 z-50 justify-center pt-5 pointer-events-none">
@@ -102,14 +162,22 @@ export default function App() {
                     {navItems.map(({ key, label }) => (
                         <button
                             key={key}
-                            className={`px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] transition-all duration-300 ${
+                            className={`relative px-5 py-2 rounded-full text-[12px] font-medium tracking-wide transition-colors duration-300 ${
                                 view === key
-                                    ? 'bg-white/[0.08] text-on-surface'
-                                    : 'text-on-surface-variant/35 hover:text-on-surface-variant/60'
+                                    ? 'text-on-surface'
+                                    : 'text-on-surface-variant/40 hover:text-on-surface-variant/70'
                             }`}
                             onClick={() => setView(key)}
                         >
-                            {label}
+                            {view === key && (
+                                <motion.span
+                                    layoutId="nav-pill-desktop"
+                                    className="absolute inset-0 rounded-full bg-white/[0.08]"
+                                    style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)' }}
+                                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                                />
+                            )}
+                            <span className="relative z-10">{label}</span>
                         </button>
                     ))}
                 </nav>
@@ -120,27 +188,75 @@ export default function App() {
 
             {/* ── Content ── */}
             <div className="relative w-full bg-transparent min-h-screen pt-0 md:pt-20 pb-28 md:pb-0">
-
                 <div className="max-w-7xl mx-auto w-full">
-                    {view === 'focus'    && <DashboardView today={today} backlog={backlog} toggle={toggle} busy={busy} />}
-                    {view === 'subjects' && <SubjectsView subjects={subjectsList} upcoming={upcoming} toggle={toggle} busy={busy} />}
-                    {view === 'history'  && <HistoryView history={history} toggle={toggle} busy={busy} />}
+                    {view === 'today' && (
+                        <TodayView
+                            today={today}
+                            todayStr={todayStr}
+                            backlog={backlog}
+                            upcoming={upcoming}
+                            toggle={toggle}
+                            busy={busy}
+                            streak={streak}
+                        />
+                    )}
+                    {view === 'progress' && (
+                        <ProgressView
+                            subjects={subjectsList}
+                            pastDays={pastDays}
+                            streak={streak}
+                            history={history}
+                            toggle={toggle}
+                            busy={busy}
+                        />
+                    )}
                 </div>
             </div>
 
-            {/* ── Mobile bottom nav — Stitch design ── */}
+            {/* ── Undo toast — appears briefly after marking complete ── */}
+            <AnimatePresence>
+                {undoInfo && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                        className="fixed bottom-28 md:bottom-8 left-0 right-0 z-[60] flex justify-center px-4 pointer-events-none"
+                    >
+                        <div className="glass-chip backdrop-blur-xl bg-surface/80 rounded-full pl-5 pr-1.5 py-1.5 flex items-center gap-3 pointer-events-auto shadow-2xl">
+                            <span className="text-[13px] text-on-surface/85">Marked complete</span>
+                            <button
+                                className="rounded-full px-4 py-2 text-[13px] font-semibold text-primary bg-white/[0.07] border-0 cursor-pointer hover:bg-white/[0.12] transition-colors"
+                                onClick={undoLast}
+                            >
+                                Undo
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Mobile bottom nav ── */}
             <div className="md:hidden fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-                <nav className="backdrop-blur-xl bg-surface/40 rounded-full flex justify-around items-center border border-white/10 shadow-2xl w-full px-6 py-4 gap-4 pointer-events-auto">
+                <nav className="backdrop-blur-xl bg-surface/40 rounded-full flex justify-around items-center border border-white/10 shadow-2xl w-full px-6 py-3 gap-4 pointer-events-auto">
                     {navItems.map(({ key, label, icon }) => (
                         <button
                             key={key}
-                            className={`flex flex-col items-center justify-center gap-1 group transition-colors min-w-[64px] bg-transparent border-0 cursor-pointer ${
+                            className={`relative flex flex-col items-center justify-center gap-1 group transition-colors min-w-[64px] py-1 bg-transparent border-0 cursor-pointer ${
                                 view === key ? 'text-primary' : 'text-on-surface-variant/50 hover:text-primary'
                             }`}
                             onClick={() => setView(key)}
                         >
-                            <span className="material-symbols-outlined text-[24px]">{icon}</span>
-                            <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
+                            {view === key && (
+                                <motion.span
+                                    layoutId="nav-pill-mobile"
+                                    className="absolute -inset-x-3 -inset-y-1.5 rounded-full bg-white/[0.07]"
+                                    style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.09)' }}
+                                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                                />
+                            )}
+                            <span className="material-symbols-outlined text-[24px] relative z-10">{icon}</span>
+                            <span className={`text-[10px] tracking-wide relative z-10 ${view === key ? 'font-semibold' : 'font-medium'}`}>{label}</span>
                         </button>
                     ))}
                 </nav>
