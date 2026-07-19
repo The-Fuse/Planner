@@ -183,9 +183,6 @@ export default function App() {
                 </nav>
             </div>
 
-            {/* ── Mobile status bar glass overlay ── */}
-            <div className="md:hidden status-bar-glass bg-[#060808]/60 backdrop-blur-lg" />
-
             {/* ── Content ── */}
             <div className="relative w-full bg-transparent min-h-screen pt-0 md:pt-20 pb-28 md:pb-0">
                 <div className="max-w-7xl mx-auto w-full">
@@ -236,23 +233,24 @@ export default function App() {
                 )}
             </AnimatePresence>
 
-            {/* ── Mobile bottom nav ── */}
-            <div className="md:hidden fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-                <nav className="backdrop-blur-xl bg-surface/40 rounded-full flex justify-around items-center border border-white/10 shadow-2xl w-full px-6 py-3 gap-4 pointer-events-auto">
+            {/* ── Mobile bottom nav: glass segmented control — the sliding thumb
+                   owns half the track, inset by the track's padding ── */}
+            <div className="md:hidden fixed bottom-6 left-0 right-0 z-50 flex justify-center px-6 pointer-events-none">
+                <nav className="backdrop-blur-xl bg-surface/40 rounded-full grid grid-cols-2 border border-white/10 shadow-2xl w-full max-w-[340px] p-1.5 pointer-events-auto">
                     {navItems.map(({ key, label, icon }) => (
                         <button
                             key={key}
-                            className={`relative flex flex-col items-center justify-center gap-1 group transition-colors min-w-[64px] py-1 bg-transparent border-0 cursor-pointer ${
-                                view === key ? 'text-primary' : 'text-on-surface-variant/50 hover:text-primary'
+                            className={`relative flex flex-col items-center justify-center gap-1 py-2 rounded-full bg-transparent border-0 cursor-pointer transition-colors duration-300 ${
+                                view === key ? 'text-on-surface' : 'text-on-surface-variant/50 hover:text-on-surface-variant/80'
                             }`}
                             onClick={() => setView(key)}
                         >
                             {view === key && (
                                 <motion.span
                                     layoutId="nav-pill-mobile"
-                                    className="absolute -inset-x-3 -inset-y-1.5 rounded-full bg-white/[0.07]"
-                                    style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.09)' }}
-                                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                                    className="absolute inset-0 rounded-full bg-white/[0.08] backdrop-blur-xl"
+                                    style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 12px -6px rgba(0,0,0,0.5)' }}
+                                    transition={{ type: 'spring', stiffness: 400, damping: 34 }}
                                 />
                             )}
                             <span className="material-symbols-outlined text-[24px] relative z-10">{icon}</span>

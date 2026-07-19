@@ -143,6 +143,38 @@ function CompactRow({
     );
 }
 
+/** Checkbox-less list row: the whole row is the tap target.
+    Completed rows render struck through (they stay listed for Upcoming;
+    Catch up rows leave the list once completed). */
+function ListRow({
+    slot, date, busy, toggle, meta,
+}: {
+    slot: Slot; date: string; busy: string | null;
+    toggle: (date: string, name: string, cur: boolean) => void;
+    meta?: string;
+}) {
+    const c = subjectColor(slot.subject);
+    const isBusy = busy === `${date}-${slot.name}`;
+    return (
+        <button
+            className={`w-full text-left bg-transparent border-0 p-0 cursor-pointer transition-opacity ${
+                isBusy ? 'opacity-40' : slot.completed ? 'opacity-45' : ''
+            }`}
+            onClick={() => toggle(date, slot.name, slot.completed)}
+            aria-label={slot.completed ? 'Undo' : 'Mark complete'}
+            title={slot.completed ? 'Tap to undo' : 'Tap to mark complete'}
+        >
+            <div className="flex items-baseline justify-between gap-3">
+                <p className={`text-[10px] font-semibold tracking-[0.09em] uppercase leading-tight ${c.text} ${slot.completed ? 'opacity-60' : ''}`}>
+                    {slot.subject}
+                </p>
+                {meta && <span className="text-[11px] text-on-surface-variant/40 tabular-nums flex-shrink-0">{meta}</span>}
+            </div>
+            <ReadingLines task={slot.task} done={slot.completed} />
+        </button>
+    );
+}
+
 /** Subject filter chips: All + one per subject with count */
 function SubjectChips({
     total, counts, active, onSelect,
@@ -156,7 +188,7 @@ function SubjectChips({
         <div className="flex gap-2 -mx-4 px-4 overflow-x-auto no-scrollbar pb-1">
             <button
                 className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium whitespace-nowrap border-0 cursor-pointer transition-colors ${
-                    !active ? 'bg-white/[0.09] text-on-surface' : 'bg-transparent text-on-surface-variant/50 hover:text-on-surface-variant/80'
+                    !active ? 'glass-chip text-on-surface' : 'bg-white/[0.03] text-on-surface-variant/50 hover:text-on-surface-variant/80'
                 }`}
                 onClick={() => onSelect(null)}
             >
@@ -169,7 +201,7 @@ function SubjectChips({
                     <button
                         key={subj}
                         className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium whitespace-nowrap border-0 cursor-pointer transition-colors flex items-center gap-1.5 ${
-                            isActive ? 'bg-white/[0.09] text-on-surface' : 'bg-transparent text-on-surface-variant/50 hover:text-on-surface-variant/80'
+                            isActive ? 'glass-chip text-on-surface' : 'bg-white/[0.03] text-on-surface-variant/50 hover:text-on-surface-variant/80'
                         }`}
                         onClick={() => onSelect(isActive ? null : subj)}
                     >
@@ -245,6 +277,30 @@ export function TodayView({
         const [uy, um, ud] = dd.split('-').map(Number);
         const dt = new Date(uy, um - 1, ud);
         return `${dt.toLocaleString('default', { weekday: 'short' })} ${dt.getDate()}`;
+    };
+
+    // With no backlog, the same slot previews tomorrow's tasks instead
+    const nextDay = upcoming.length ? upcoming[0] : null;
+    const nextDayLabel = (() => {
+        if (!nextDay) return '';
+        const [ny, nm, nd] = nextDay.date.split('-').map(Number);
+        const ndt = new Date(ny, nm - 1, nd);
+        const diff = Math.round((ndt.getTime() - dateObj.getTime()) / 86400000);
+        return diff === 1 ? 'Tomorrow' : ndt.toLocaleString('default', { weekday: 'long' });
+    })();
+
+    // Oldest backlog day, surfaced on Today so light days end with something actionable.
+    // Ticking a row shows the check + strikethrough first, then slides it out and syncs.
+    const firstBacklogRows = backlog.length ? backlog.filter(b => b.date === backlog[0].date) : [];
+    const [clearing, setClearing] = useState<Set<string>>(new Set());
+    const clearingToggle = (date: string, name: string, cur: boolean) => {
+        const id = `${date}-${name}`;
+        if (clearing.has(id)) return;
+        setClearing(prev => new Set(prev).add(id));
+        window.setTimeout(() => {
+            setClearing(prev => { const n = new Set(prev); n.delete(id); return n; });
+            toggle(date, name, cur);
+        }, 500);
     };
 
     const heroColor = hero ? subjectColor(hero.subject) : null;
@@ -331,9 +387,10 @@ export function TodayView({
                                         style={{ background: `${heroColor.hex}1f` }}
                                     >
                                         <span className="relative flex w-1.5 h-1.5">
+                                            {/* Ripple keyframes start and end at opacity 0 so the loop restart is invisible */}
                                             <motion.span
-                                                animate={{ scale: [1, 2.4], opacity: [0.55, 0] }}
-                                                transition={{ repeat: Infinity, duration: 2, ease: 'easeOut' }}
+                                                animate={{ scale: [1, 1, 2.4], opacity: [0, 0.55, 0] }}
+                                                transition={{ repeat: Infinity, duration: 2.4, times: [0, 0.3, 1], ease: 'easeOut' }}
                                                 className="absolute inset-0 rounded-full"
                                                 style={{ background: heroColor.hex }}
                                             />
@@ -417,6 +474,47 @@ export function TodayView({
                     </section>
                 )}
 
+                {/* ── Oldest backlog day: tick to clear, row celebrates then slides out.
+                       With nothing to catch up on, tomorrow's tasks show here instead. ── */}
+                {firstBacklogRows.length > 0 ? (
+                    <section className="mb-2">
+                        <SectionLabel>Catch up · {fmtShort(firstBacklogRows[0].date)}</SectionLabel>
+                        <div className="glass-card rounded-2xl px-4 py-1 overflow-hidden">
+                            <AnimatePresence initial={false} mode="popLayout">
+                                {firstBacklogRows.map(item => {
+                                    const id = `${item.date}-${item.slot.name}`;
+                                    return (
+                                        <motion.div
+                                            key={id}
+                                            layout
+                                            exit={{ opacity: 0, x: 56, scale: 0.97, transition: { duration: 0.3, ease: [0.4, 0, 1, 1] } }}
+                                            className="py-3 border-b border-white/[0.05] last:border-0"
+                                        >
+                                            <CompactRow
+                                                slot={{ ...item.slot, completed: clearing.has(id) }}
+                                                date={item.date}
+                                                busy={busy}
+                                                toggle={clearingToggle}
+                                            />
+                                        </motion.div>
+                                    );
+                                })}
+                            </AnimatePresence>
+                        </div>
+                    </section>
+                ) : nextDay && nextDay.slots.length > 0 ? (
+                    <section className="mb-2">
+                        <SectionLabel>{nextDayLabel}</SectionLabel>
+                        <div className="glass-card rounded-2xl px-4 py-1">
+                            {nextDay.slots.map(slot => (
+                                <div key={slot.name} className="py-3 border-b border-white/[0.05] last:border-0">
+                                    <ListRow slot={slot} date={nextDay.date} busy={busy} toggle={toggle} />
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                ) : null}
+
                 {/* ── Catch up / Upcoming: quiet stat cards, expand on tap ── */}
                 {(backlog.length > 0 || upcomingRows.length > 0) && (
                     <section className="mt-10">
@@ -481,7 +579,7 @@ export function TodayView({
                                         <div className="mt-1 divide-y divide-white/[0.05]">
                                             {visibleBacklog.map(item => (
                                                 <div key={`${item.date}-${item.slot.name}`} className="py-3">
-                                                    <CompactRow
+                                                    <ListRow
                                                         slot={item.slot}
                                                         date={item.date}
                                                         busy={busy}
@@ -526,7 +624,7 @@ export function TodayView({
                                         <div className="mt-1 divide-y divide-white/[0.05]">
                                             {visibleUpcoming.map(item => (
                                                 <div key={`${item.date}-${item.slot.name}`} className="py-3">
-                                                    <CompactRow
+                                                    <ListRow
                                                         slot={item.slot}
                                                         date={item.date}
                                                         busy={busy}

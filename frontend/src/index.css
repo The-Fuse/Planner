@@ -7,6 +7,17 @@
     @apply bg-[#060808] text-[#e2e2e2] overflow-x-hidden min-h-screen;
     font-family: 'Manrope', system-ui, sans-serif;
   }
+
+  /* Hide the page scroll indicator — the layout gives enough position cues */
+  html,
+  body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer components {
@@ -105,20 +116,6 @@
     }
   }
 
-  .status-bar-glass {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 0px;
-    z-index: 50;
-    pointer-events: none;
-  }
-  @supports (height: env(safe-area-inset-top)) {
-    .status-bar-glass {
-      height: env(safe-area-inset-top);
-    }
-  }
 }
 
 @layer utilities {

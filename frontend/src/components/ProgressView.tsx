@@ -56,10 +56,10 @@ function ConsistencyCalendar({ pastDays }: { pastDays: DayPlan[] }) {
     };
 
     return (
-        <div className="max-w-[420px]">
+        <div className="w-full">
             {/* Subject filter — same pattern as Catch up */}
             {subjects.length > 1 && (
-                <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar -mx-5 px-5">
+                <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar -mx-6 px-6">
                     <button
                         className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium whitespace-nowrap border-0 cursor-pointer transition-colors ${
                             !subject ? 'glass-chip text-on-surface' : 'bg-white/[0.03] text-on-surface-variant/50 hover:text-on-surface-variant/80'
@@ -128,8 +128,8 @@ function ConsistencyCalendar({ pastDays }: { pastDays: DayPlan[] }) {
                                 return (
                                     <div
                                         key={day}
-                                        className={`aspect-square rounded-[10px] flex items-center justify-center text-[11px] tabular-nums ${cls}`}
-                                        style={isToday ? { boxShadow: '0 0 0 1.5px rgba(173,198,255,0.7)' } : undefined}
+                                        className={`aspect-square md:aspect-auto md:h-10 rounded-[10px] flex items-center justify-center text-[11px] tabular-nums ${cls}`}
+                                        style={isToday ? { boxShadow: 'inset 0 0 0 1.5px rgba(173,198,255,0.7)' } : undefined}
                                         title={stat ? `${dateStr} · ${stat.done}/${stat.total}` : dateStr}
                                     >
                                         {day}
@@ -182,9 +182,9 @@ export function ProgressView({
         : 0;
 
     return (
-        <main className="max-w-[640px] mx-auto pb-16">
-            <header className="sticky-glass-header bg-[#060808]/60 backdrop-blur-lg md:static md:bg-transparent md:backdrop-blur-none px-5 z-40">
-                <div className="max-w-[640px] mx-auto">
+        <main className="max-w-[560px] mx-auto pb-16">
+            <header className="sticky-glass-header bg-[#060808]/70 backdrop-blur-lg md:static md:bg-transparent md:backdrop-blur-none px-6 z-40">
+                <div className="max-w-[560px] mx-auto">
                     {prepDay > 0 && (
                         <p className="text-[13px] text-on-surface-variant/50 font-medium">Day {prepDay} of preparation</p>
                     )}
@@ -192,7 +192,7 @@ export function ProgressView({
                 </div>
             </header>
 
-            <div className="px-5">
+            <div className="px-6">
                 {/* ── Stat tiles ── */}
                 <div className="grid grid-cols-3 gap-3 mt-5 mb-10">
                     {stats.map(s => (
