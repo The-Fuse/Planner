@@ -4,7 +4,16 @@ import math
 from data import subjects_data
 
 # Configuration
-START_DATE = datetime.date(2026, 6, 1)
+# Rescheduled 2026-07-19: plan restarts the next day with each subject
+# fast-forwarded past pages already completed under the old June schedule.
+START_DATE = datetime.date(2026, 7, 20)
+
+# First unread page per subject as of the reschedule (from completed slots:
+# Western Philosophy read pp.1-86, Ethics read pp.7-71)
+RESUME_PAGES = {
+    "Western Philosophy": 87,
+    "Ethics": 72,
+}
 
 # Page Limits
 LIMITS = {
@@ -155,12 +164,16 @@ def generate_schedule():
 
     # Define slot pipelines: each slot has an ordered list of subjects
     slot1_pipeline = [
-        SubjectTracker("Western Philosophy", subjects_data["Western Philosophy"]),
-        SubjectTracker("Indian Philosophy", subjects_data["Indian Philosophy"]),
+        SubjectTracker("Western Philosophy", subjects_data["Western Philosophy"],
+                       start_from_page=RESUME_PAGES.get("Western Philosophy")),
+        SubjectTracker("Indian Philosophy", subjects_data["Indian Philosophy"],
+                       start_from_page=RESUME_PAGES.get("Indian Philosophy")),
     ]
     slot2_pipeline = [
-        SubjectTracker("Ethics", subjects_data["Ethics"]),
-        SubjectTracker("Art & Culture", subjects_data["Art & Culture"]),
+        SubjectTracker("Ethics", subjects_data["Ethics"],
+                       start_from_page=RESUME_PAGES.get("Ethics")),
+        SubjectTracker("Art & Culture", subjects_data["Art & Culture"],
+                       start_from_page=RESUME_PAGES.get("Art & Culture")),
     ]
 
     # Active subjects — start with the first in each pipeline
