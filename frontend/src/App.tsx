@@ -183,6 +183,10 @@ export default function App() {
                 </nav>
             </div>
 
+            {/* ── iOS status bar: pure blur, no tint — the header's own glass
+                   provides the color; a tint here would stack into a solid band ── */}
+            <div aria-hidden className="md:hidden status-bar-blur" />
+
             {/* ── Content ── */}
             <div className="relative w-full bg-transparent min-h-screen pt-0 md:pt-20 pb-28 md:pb-0">
                 <div className="max-w-7xl mx-auto w-full">
@@ -236,12 +240,12 @@ export default function App() {
             {/* ── Mobile bottom nav: glass segmented control — the sliding thumb
                    owns half the track, inset by the track's padding ── */}
             <div className="md:hidden fixed bottom-6 left-0 right-0 z-50 flex justify-center px-6 pointer-events-none">
-                <nav className="backdrop-blur-xl bg-surface/40 rounded-full grid grid-cols-2 border border-white/10 shadow-2xl w-full max-w-[340px] p-1.5 pointer-events-auto">
+                <nav className="backdrop-blur-xl bg-surface/40 rounded-full grid grid-cols-2 border border-white/10 shadow-2xl w-full p-1.5 pointer-events-auto">
                     {navItems.map(({ key, label, icon }) => (
                         <button
                             key={key}
                             className={`relative flex flex-col items-center justify-center gap-1 py-2 rounded-full bg-transparent border-0 cursor-pointer transition-colors duration-300 ${
-                                view === key ? 'text-on-surface' : 'text-on-surface-variant/50 hover:text-on-surface-variant/80'
+                                view === key ? 'text-primary' : 'text-on-surface-variant/50 hover:text-primary'
                             }`}
                             onClick={() => setView(key)}
                         >

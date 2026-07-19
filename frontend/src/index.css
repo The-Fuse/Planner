@@ -102,6 +102,25 @@
     @apply font-thin tracking-[-0.05em] leading-[0.8];
   }
 
+  /* iOS standalone status bar — blur only, no background: the sticky header
+     underneath supplies the tint; stacking another tint reads as a solid bar */
+  .status-bar-blur {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 0px;
+    z-index: 60;
+    pointer-events: none;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  @supports (height: env(safe-area-inset-top)) {
+    .status-bar-blur {
+      height: env(safe-area-inset-top);
+    }
+  }
+
   /* iOS safe-area glass header — env() MUST be in real CSS, not React inline styles */
   .sticky-glass-header {
     position: sticky;
