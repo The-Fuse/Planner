@@ -3,6 +3,8 @@ export interface Slot {
     subject: string;
     task: string;
     completed: boolean;
+    /** Estimated reading time from the scheduler (hardness-weighted) */
+    minutes?: number;
 }
 
 export interface DayPlan {

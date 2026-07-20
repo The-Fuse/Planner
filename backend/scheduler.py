@@ -124,23 +124,28 @@ class SubjectTracker:
                 self.current_chapter_idx = len(self.chapters) # Boundary safety
 
     def get_next_chunk(self, max_pages):
+        # Estimated reading minutes for the chunk (by chapter hardness) is
+        # exposed via self.last_chunk_minutes after each call.
+        self.last_chunk_minutes = 0
         if self.finished:
             return None
 
         chunk_pages = 0
         desc_parts = []
-        
+
         while chunk_pages < max_pages and not self.finished:
             chapter = self.chapters[self.current_chapter_idx]
             end_page = chapter['end']
             remaining_in_chapter = end_page - self.current_page + 1
-            
+            min_per_page = get_minutes_per_page(chapter.get('hardness', 1.0))
+
             can_take = max_pages - chunk_pages
-            
+
             if remaining_in_chapter <= can_take:
                 # Finish this chapter
                 desc_parts.append(f"{chapter['chapter']} (pp.{self.current_page}-{end_page})")
                 chunk_pages += remaining_in_chapter
+                self.last_chunk_minutes += remaining_in_chapter * min_per_page
                 self.current_chapter_idx += 1
                 if self.current_chapter_idx >= len(self.chapters):
                     self.finished = True
@@ -154,7 +159,8 @@ class SubjectTracker:
                 desc_parts.append(f"{chapter['chapter']} (pp.{self.current_page}-{chunk_end})")
                 self.current_page += take_pages
                 chunk_pages += take_pages
-        
+                self.last_chunk_minutes += take_pages * min_per_page
+
         return ", ".join(desc_parts)
 
 def generate_schedule():
@@ -221,7 +227,7 @@ def generate_schedule():
                 limit = calculate_limit(active_slot1, "Morning", other_hardness_value=other_h_val, base_cap_override=base_cap)
                 task = active_slot1.get_next_chunk(limit)
                 if task:
-                    day_plan["slots"].append({"name": "Morning", "subject": active_slot1.name, "task": task})
+                    day_plan["slots"].append({"name": "Morning", "subject": active_slot1.name, "task": task, "minutes": active_slot1.last_chunk_minutes})
                 else:
                     day_plan["slots"].append({"name": "Morning", "subject": "Revision", "task": "Subject Revision"})
                     morning_hardness = 0.0
@@ -234,7 +240,7 @@ def generate_schedule():
                 limit = calculate_limit(active_slot2, "Evening", other_hardness_value=morning_hardness)
                 task = active_slot2.get_next_chunk(limit)
                 if task:
-                    day_plan["slots"].append({"name": "Evening", "subject": active_slot2.name, "task": task})
+                    day_plan["slots"].append({"name": "Evening", "subject": active_slot2.name, "task": task, "minutes": active_slot2.last_chunk_minutes})
                 else:
                     day_plan["slots"].append({"name": "Evening", "subject": "Revision", "task": "Subject Revision"})
             else:
@@ -249,7 +255,7 @@ def generate_schedule():
                 limit = calculate_limit(active_slot1, "WeekendBlock", base_cap_override=base_cap)
                 task = active_slot1.get_next_chunk(limit)
                 if task:
-                    day_plan["slots"].append({"name": "Block 1", "subject": active_slot1.name, "task": task})
+                    day_plan["slots"].append({"name": "Block 1", "subject": active_slot1.name, "task": task, "minutes": active_slot1.last_chunk_minutes})
             else:
                 day_plan["slots"].append({"name": "Block 1", "subject": "Buffer", "task": "Revision"})
 
@@ -258,7 +264,7 @@ def generate_schedule():
                 limit = calculate_limit(active_slot1, "WeekendBlock", base_cap_override=LIMITS["Weekend_Default"])
                 task = active_slot1.get_next_chunk(limit)
                 if task:
-                    day_plan["slots"].append({"name": "Block 2", "subject": active_slot1.name, "task": task})
+                    day_plan["slots"].append({"name": "Block 2", "subject": active_slot1.name, "task": task, "minutes": active_slot1.last_chunk_minutes})
             else:
                 day_plan["slots"].append({"name": "Block 2", "subject": "Buffer", "task": "Revision"})
 
@@ -267,7 +273,7 @@ def generate_schedule():
                 limit = calculate_limit(active_slot2, "WeekendBlock", base_cap_override=LIMITS["Weekend_Default"])
                 task = active_slot2.get_next_chunk(limit)
                 if task:
-                    day_plan["slots"].append({"name": "Block 3", "subject": active_slot2.name, "task": task})
+                    day_plan["slots"].append({"name": "Block 3", "subject": active_slot2.name, "task": task, "minutes": active_slot2.last_chunk_minutes})
             else:
                 day_plan["slots"].append({"name": "Block 3", "subject": "Buffer", "task": "Revision"})
 

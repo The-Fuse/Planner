@@ -9,7 +9,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from scheduler import generate_schedule
-from storage import load_progress, save_progress, init_db, get_preference, set_preference
+from storage import (
+    load_progress, save_progress, init_db, get_preference, set_preference,
+    load_study_time, set_study_time,
+)
 from notifier import send_daily_notification
 
 app = FastAPI()
@@ -105,6 +108,19 @@ def get_stats():
         "stats": stats,
         "completed_subjects": completed_subjects
     }
+
+@app.get("/api/study-time")
+def get_study_time():
+    """All studied seconds, keyed "date_slot"."""
+    return load_study_time()
+
+@app.post("/api/study-time")
+def post_study_time(key: str, seconds: int):
+    """Record total studied seconds for a task (monotonic upsert)."""
+    if seconds < 0 or seconds > 24 * 3600 * 90 or len(key) > 255:
+        raise HTTPException(status_code=400, detail="Invalid study-time payload")
+    set_study_time(key, seconds)
+    return {"status": "success", "key": key, "seconds": seconds}
 
 @app.get("/api/preferences/{key}")
 def get_pref_api(key: str):

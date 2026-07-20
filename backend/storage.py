@@ -59,6 +59,14 @@ def init_db():
             )
         ''')
 
+        # Create study_time table (pomodoro seconds per "date_slot" key)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS study_time (
+                key VARCHAR(255) PRIMARY KEY,
+                seconds INTEGER NOT NULL
+            )
+        ''')
+
         conn.commit()
         conn.close()
 
@@ -150,6 +158,44 @@ def save_progress(data):
         print(f"Database error in save_progress: {e}")
         import traceback
         traceback.print_exc()
+
+def load_study_time():
+    """Load all studied-seconds records ({"date_slot": seconds})"""
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT key, seconds FROM study_time')
+        rows = cursor.fetchall()
+        conn.close()
+        return {key: int(seconds) for key, seconds in rows}
+    except Exception as e:
+        print(f"Database error in load_study_time: {e}")
+        return {}
+
+def set_study_time(key, seconds):
+    """Upsert studied seconds for a task — monotonic (never decreases), so a
+    stale device syncing late can't erase time recorded elsewhere."""
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+
+        if db_type == "postgres":
+            cursor.execute('''
+                INSERT INTO study_time (key, seconds) VALUES (%s, %s)
+                ON CONFLICT (key) DO UPDATE
+                SET seconds = GREATEST(study_time.seconds, EXCLUDED.seconds)
+            ''', (key, seconds))
+        else:
+            cursor.execute('''
+                INSERT INTO study_time (key, seconds) VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE
+                SET seconds = MAX(seconds, excluded.seconds)
+            ''', (key, seconds))
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Database error in set_study_time: {e}")
 
 def get_preference(key, default=None):
     """Get a preference value by key"""
