@@ -17,14 +17,67 @@ function parseLocal(d: string) {
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
+/** First week of tracking: a quiet 7-dot strip — a month grid with one
+    filled cell says nothing */
+function WeekStrip({ pastDays }: { pastDays: DayPlan[] }) {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+
+    const statByDate = new Map(pastDays.map(d => [d.date, {
+        done: d.slots.filter(s => s.completed).length,
+        total: d.slots.length,
+    }]));
+
+    return (
+        <div className="flex justify-between px-1">
+            {Array.from({ length: 7 }).map((_, i) => {
+                const d = new Date(monday);
+                d.setDate(monday.getDate() + i);
+                const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                const stat = statByDate.get(ds);
+                const isToday = ds === todayStr;
+                const isFuture = ds > todayStr;
+
+                let dot = 'bg-white/[0.07]';                                  // rest / unscheduled
+                if (stat && stat.total > 0) {
+                    if (stat.done === stat.total) dot = 'bg-primary';
+                    else if (stat.done > 0)       dot = 'bg-primary/40';
+                    else if (!isFuture && !isToday) dot = 'bg-white/[0.12]';   // missed
+                }
+                if (isFuture) dot = 'bg-white/[0.05]';
+
+                return (
+                    <div key={ds} className="flex flex-col items-center gap-2">
+                        <span className={`text-[10px] font-medium ${isToday ? 'text-primary' : 'text-on-surface-variant/45'}`}>
+                            {WEEKDAYS[i]}
+                        </span>
+                        <span
+                            className={`w-2.5 h-2.5 rounded-full ${dot}`}
+                            style={isToday ? { boxShadow: '0 0 0 1.5px rgba(173,198,255,0.6)' } : undefined}
+                            title={stat ? `${ds} · ${stat.done}/${stat.total}` : ds}
+                        />
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 /** Calendar-style consistency: one month per slide, chronological left→right,
     opens on the current month; filterable by subject like Catch up */
-function ConsistencyCalendar({ pastDays }: { pastDays: DayPlan[] }) {
+function ConsistencyCalendar({ pastDays, allSubjects }: { pastDays: DayPlan[]; allSubjects?: string[] }) {
     const [subject, setSubject] = useState<string | null>(null);
 
-    // Subjects in order of first appearance
-    const subjects: string[] = [];
-    pastDays.forEach(d => d.slots.forEach(s => { if (!subjects.includes(s.subject)) subjects.push(s.subject); }));
+    // Same subject list as the Subjects section — chips shouldn't disagree
+    const subjects: string[] = allSubjects && allSubjects.length
+        ? allSubjects
+        : (() => {
+            const derived: string[] = [];
+            pastDays.forEach(d => d.slots.forEach(s => { if (!derived.includes(s.subject)) derived.push(s.subject); }));
+            return derived;
+        })();
 
     // Day stats, scoped to the selected subject when one is active
     const dayStats: DayStat[] = pastDays.map(d => {
@@ -61,7 +114,7 @@ function ConsistencyCalendar({ pastDays }: { pastDays: DayPlan[] }) {
             {subjects.length > 1 && (
                 <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar -mx-6 px-6">
                     <button
-                        className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium whitespace-nowrap border-0 cursor-pointer transition-colors ${
+                        className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium whitespace-nowrap border-0 cursor-pointer transition-[color,transform] active:scale-95 ${
                             !subject ? 'glass-chip text-on-surface' : 'bg-white/[0.03] text-on-surface-variant/50 hover:text-on-surface-variant/80'
                         }`}
                         onClick={() => setSubject(null)}
@@ -74,7 +127,7 @@ function ConsistencyCalendar({ pastDays }: { pastDays: DayPlan[] }) {
                         return (
                             <button
                                 key={subj}
-                                className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium whitespace-nowrap border-0 cursor-pointer transition-colors flex items-center gap-1.5 ${
+                                className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium whitespace-nowrap border-0 cursor-pointer transition-[color,transform] active:scale-95 flex items-center gap-1.5 ${
                                     active ? 'glass-chip text-on-surface' : 'bg-white/[0.03] text-on-surface-variant/50 hover:text-on-surface-variant/80'
                                 }`}
                                 onClick={() => setSubject(active ? null : subj)}
@@ -100,11 +153,11 @@ function ConsistencyCalendar({ pastDays }: { pastDays: DayPlan[] }) {
                     <section key={mk} className="flex-shrink-0 w-full snap-start">
                         <div className="flex justify-between items-baseline mb-2.5">
                             <h4 className="font-display text-[13px] font-medium text-on-surface/80">{monthName}</h4>
-                            <span className="text-[11px] text-on-surface-variant/40 tabular-nums">{fullDays}/{monthStats.length} days</span>
+                            <span className="text-[11px] text-on-surface-variant/50 tabular-nums">{fullDays}/{monthStats.length} days</span>
                         </div>
                         <div className="grid grid-cols-7 gap-1.5 mb-1.5">
                             {WEEKDAYS.map((w, i) => (
-                                <div key={i} className="text-center text-[10px] font-medium text-on-surface-variant/30">{w}</div>
+                                <div key={i} className="text-center text-[10px] font-medium text-on-surface-variant/45">{w}</div>
                             ))}
                         </div>
                         <div className="grid grid-cols-7 gap-1.5">
@@ -123,7 +176,7 @@ function ConsistencyCalendar({ pastDays }: { pastDays: DayPlan[] }) {
                                     else if (ratio > 0)   cls = 'bg-primary/25 text-primary/90';
                                     else                  cls = 'bg-white/[0.04] text-on-surface-variant/40';
                                 }
-                                if (isFuture) cls = 'bg-transparent text-on-surface-variant/15';
+                                if (isFuture) cls = 'bg-transparent text-on-surface-variant/25';
 
                                 return (
                                     <div
@@ -157,7 +210,7 @@ function ConsistencyCalendar({ pastDays }: { pastDays: DayPlan[] }) {
 }
 
 export function ProgressView({
-    subjects, pastDays, streak, history, toggle, busy,
+    subjects, pastDays, streak, history, toggle, busy, endDate,
 }: {
     subjects: { name: string; pct: number; completed: number; total: number }[];
     pastDays: DayPlan[];
@@ -165,6 +218,7 @@ export function ProgressView({
     history: { slot: Slot; date: string }[];
     toggle: (date: string, name: string, cur: boolean) => void;
     busy: string | null;
+    endDate?: string | null;
 }) {
     const totalAll = subjects.reduce((a, s) => a + s.total, 0);
     const doneAll = subjects.reduce((a, s) => a + s.completed, 0);
@@ -186,7 +240,12 @@ export function ProgressView({
             <header className="sticky-glass-header bg-[#060808]/70 backdrop-blur-lg md:static md:bg-transparent md:backdrop-blur-none px-6 z-40">
                 <div className="max-w-[560px] mx-auto">
                     {prepDay > 0 && (
-                        <p className="text-[13px] text-on-surface-variant/50 font-medium">Day {prepDay} of preparation</p>
+                        <p className="text-[13px] text-on-surface-variant/50 font-medium">
+                            Day {prepDay} of preparation
+                            {endDate ? (
+                                <span className="text-on-surface-variant/40"> · finishes {parseLocal(endDate).toLocaleString('default', { month: 'short', day: 'numeric' })}</span>
+                            ) : null}
+                        </p>
                     )}
                     <h1 className="font-display text-[24px] font-semibold text-on-surface tracking-tight leading-tight">Progress</h1>
                 </div>
@@ -196,7 +255,7 @@ export function ProgressView({
                 {/* ── Stat tiles ── */}
                 <div className="grid grid-cols-3 gap-3 mt-5 mb-10">
                     {stats.map(s => (
-                        <div key={s.label} className="glass-card rounded-[20px] px-3 py-5 text-center">
+                        <div key={s.label} className="glass-card rounded-2xl px-3 py-5 text-center">
                             <p className={`font-display text-[24px] font-semibold tabular-nums leading-none ${s.cls}`}>{s.value}</p>
                             <p className="text-[11px] text-on-surface-variant/50 mt-2 whitespace-nowrap">{s.label}</p>
                         </div>
@@ -206,15 +265,19 @@ export function ProgressView({
                 {/* ── Consistency ── */}
                 {pastDays.length > 0 && (
                     <section className="mb-10">
-                        <h3 className="text-[12px] font-medium text-on-surface-variant/40 mb-4">Consistency</h3>
-                        <ConsistencyCalendar pastDays={pastDays} />
+                        <h3 className="text-[12px] font-medium text-on-surface-variant/55 mb-4">Consistency</h3>
+                        {pastDays.length < 7 ? (
+                            <WeekStrip pastDays={pastDays} />
+                        ) : (
+                            <ConsistencyCalendar pastDays={pastDays} allSubjects={subjects.map(s => s.name)} />
+                        )}
                     </section>
                 )}
 
                 {/* ── Subjects ── */}
                 {subjects.length > 0 && (
                     <section className="mb-10">
-                        <h3 className="text-[12px] font-medium text-on-surface-variant/40 mb-1">Subjects</h3>
+                        <h3 className="text-[12px] font-medium text-on-surface-variant/55 mb-1">Subjects</h3>
                         <div>
                             {subjects.map(s => {
                                 const c = subjectColor(s.name);
@@ -245,7 +308,7 @@ export function ProgressView({
                 {/* ── Recent completions (tap to undo) ── */}
                 {history.length > 0 && (
                     <section>
-                        <h3 className="text-[12px] font-medium text-on-surface-variant/40 mb-1">Recent</h3>
+                        <h3 className="text-[12px] font-medium text-on-surface-variant/55 mb-1">Recent</h3>
                         <div>
                             {history.slice(0, 10).map(item => {
                                 const id = `${item.date}-${item.slot.name}`;

@@ -5,24 +5,61 @@ import { DayPlan, Slot, SubjectStats } from './interfaces';
 import { TodayView } from './components/TodayView';
 import { ProgressView, DayStat } from './components/ProgressView';
 
-const API = import.meta.env.VITE_API_URL || 'https://planner-936q.onrender.com';
+import { API } from './api';
+
+const CACHE_KEY = 'planner-cache-v1';
+
+function localToday() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export default function App() {
     const [schedule, setSchedule] = useState<DayPlan[]>([]);
     const [stats, setStats]       = useState<Record<string, SubjectStats>>({});
     const [loading, setLoading]   = useState(true);
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    // State (not a per-render const) so a PWA resumed after midnight rolls over
+    const [todayStr, setTodayStr] = useState(localToday);
+
+    const fetchAll = () => Promise.all([
+        axios.get(`${API}/api/plan`),
+        axios.get(`${API}/api/stats`),
+    ]).then(([p, s]) => {
+        const st = s.data.stats || s.data;
+        setSchedule(p.data);
+        setStats(st);
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify({ plan: p.data, stats: st })); } catch { /* quota */ }
+    });
 
     useEffect(() => {
-        Promise.all([
-            axios.get(`${API}/api/plan`),
-            axios.get(`${API}/api/stats`),
-        ]).then(([p, s]) => {
-            setSchedule(p.data);
-            setStats(s.data.stats || s.data);
-        }).catch(console.error)
-          .finally(() => setLoading(false));
+        // Stale-while-revalidate: paint the cached plan immediately (Render
+        // free tier cold-starts take seconds), then refresh in the background
+        try {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                const { plan, stats: st } = JSON.parse(cached);
+                if (Array.isArray(plan) && plan.length) {
+                    setSchedule(plan);
+                    setStats(st || {});
+                    setLoading(false);
+                }
+            }
+        } catch { /* corrupt cache — fall through to network */ }
+
+        fetchAll().catch(console.error).finally(() => setLoading(false));
+    }, []);
+
+    useEffect(() => {
+        // On resume: roll the date over and pick up marks made on other devices
+        const onVisible = () => {
+            if (document.visibilityState !== 'visible') return;
+            const now = localToday();
+            setTodayStr(prev => (prev === now ? prev : now));
+            fetchAll().catch(() => { /* offline — keep showing current data */ });
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
     }, []);
 
     const { backlog, history, today, upcoming, streak, pastDays } = useMemo(() => {
@@ -209,6 +246,7 @@ export default function App() {
                             history={history}
                             toggle={toggle}
                             busy={busy}
+                            endDate={schedule.length ? schedule[schedule.length - 1].date : null}
                         />
                     )}
                 </div>
