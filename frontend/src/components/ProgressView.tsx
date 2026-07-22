@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { DayPlan, Slot } from '../interfaces';
 import { summarizeTask } from './TaskContent';
 import { subjectColor } from '../subjectColors';
+import { pagesInTask, fmtMinutes } from '../insights';
+import { overrunInsight, loadStudyTime } from '../insights';
 
 export interface DayStat {
     date: string;
@@ -235,6 +237,26 @@ export function ProgressView({
         ? Math.floor((Date.now() - parseLocal(pastDays[0].date).getTime()) / 86400000) + 1
         : 0;
 
+    // Learned-pace nudge for the subject running furthest over its estimate
+    const studyTime = loadStudyTime();
+    const insight = overrunInsight(pastDays, studyTime);
+
+    // Sunday round-up over the last 7 tracked days
+    const isSunday = new Date().getDay() === 0;
+    const last7 = pastDays.slice(-7);
+    const weekDates = new Set(last7.map(d => d.date));
+    let weekBlocks = 0, weekPages = 0, weekFull = 0;
+    last7.forEach(d => {
+        const done = d.slots.filter(s => s.completed).length;
+        d.slots.forEach(s => { if (s.completed) { weekBlocks++; weekPages += pagesInTask(s.task); } });
+        if (d.slots.length > 0 && done === d.slots.length) weekFull++;
+    });
+    let weekSecs = 0;
+    Object.entries(studyTime).forEach(([k, sec]) => {
+        if (weekDates.has(k.slice(0, 10))) weekSecs += sec;
+    });
+    const showWeek = isSunday && pastDays.length >= 7;
+
     return (
         <main className="max-w-[560px] mx-auto pb-16">
             <header className="sticky-glass-header bg-[#060808]/70 backdrop-blur-lg md:static md:bg-transparent md:backdrop-blur-none px-6 z-40">
@@ -252,6 +274,11 @@ export function ProgressView({
             </header>
 
             <div className="px-6">
+                {/* ── Learned-pace nudge ── */}
+                {insight && (
+                    <p className="text-[12px] text-on-surface-variant/55 mt-4 leading-snug">{insight}</p>
+                )}
+
                 {/* ── Stat tiles ── */}
                 <div className="grid grid-cols-3 gap-3 mt-5 mb-10">
                     {stats.map(s => (
@@ -261,6 +288,16 @@ export function ProgressView({
                         </div>
                     ))}
                 </div>
+
+                {/* ── This week (Sunday round-up) ── */}
+                {showWeek && (
+                    <div className="glass-card rounded-[24px] p-5 mb-10">
+                        <p className="text-[12px] font-medium text-on-surface-variant/55 mb-2">This week</p>
+                        <p className="text-[15px] text-on-surface/85 tabular-nums">
+                            {weekBlocks} blocks · {weekPages} pages · {fmtMinutes(Math.floor(weekSecs / 60))} studied · {weekFull}/7 full days
+                        </p>
+                    </div>
+                )}
 
                 {/* ── Consistency ── */}
                 {pastDays.length > 0 && (

@@ -1,7 +1,9 @@
 
 import datetime
+import json
 import math
 from data import subjects_data
+from storage import get_preference
 
 # Configuration
 # Rescheduled 2026-07-19: plan restarts the next day with each subject
@@ -163,23 +165,59 @@ class SubjectTracker:
 
         return ", ".join(desc_parts)
 
-def generate_schedule():
+def _resolve_config(start_date, resume_pages):
+    """Resolve the effective start date and resume-page map.
+
+    Precedence: explicit kwarg > DB preference > module-level constant.
+    The module constants (START_DATE / RESUME_PAGES) remain the documented
+    defaults used when nothing is stored and nothing is passed in.
+    """
+    if start_date is None:
+        override = get_preference("schedule_start")
+        if override:
+            try:
+                start_date = datetime.date.fromisoformat(override)
+            except (ValueError, TypeError):
+                start_date = START_DATE
+        else:
+            start_date = START_DATE
+
+    if resume_pages is None:
+        override = get_preference("resume_pages")
+        if override:
+            try:
+                parsed = json.loads(override)
+                if isinstance(parsed, dict):
+                    resume_pages = {str(k): int(v) for k, v in parsed.items()}
+                else:
+                    resume_pages = RESUME_PAGES
+            except (ValueError, TypeError):
+                resume_pages = RESUME_PAGES
+        else:
+            resume_pages = RESUME_PAGES
+
+    return start_date, resume_pages
+
+
+def generate_schedule(start_date=None, resume_pages=None):
     # Slot 1: Western Philosophy -> Indian Philosophy
     # Slot 2: Ethics -> Art & Culture
     # Each slot has a successor that takes over when the current subject finishes.
 
+    start_date, resume_pages = _resolve_config(start_date, resume_pages)
+
     # Define slot pipelines: each slot has an ordered list of subjects
     slot1_pipeline = [
         SubjectTracker("Western Philosophy", subjects_data["Western Philosophy"],
-                       start_from_page=RESUME_PAGES.get("Western Philosophy")),
+                       start_from_page=resume_pages.get("Western Philosophy")),
         SubjectTracker("Indian Philosophy", subjects_data["Indian Philosophy"],
-                       start_from_page=RESUME_PAGES.get("Indian Philosophy")),
+                       start_from_page=resume_pages.get("Indian Philosophy")),
     ]
     slot2_pipeline = [
         SubjectTracker("Ethics", subjects_data["Ethics"],
-                       start_from_page=RESUME_PAGES.get("Ethics")),
+                       start_from_page=resume_pages.get("Ethics")),
         SubjectTracker("Art & Culture", subjects_data["Art & Culture"],
-                       start_from_page=RESUME_PAGES.get("Art & Culture")),
+                       start_from_page=resume_pages.get("Art & Culture")),
     ]
 
     # Active subjects — start with the first in each pipeline
@@ -187,7 +225,7 @@ def generate_schedule():
     active_slot2 = slot2_pipeline.pop(0)
 
     schedule = []
-    current_date = START_DATE
+    current_date = start_date
 
     while True:
         # Promote successor if current slot subject is finished

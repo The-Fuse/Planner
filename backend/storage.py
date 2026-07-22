@@ -67,6 +67,22 @@ def init_db():
             )
         ''')
 
+        # Create task_pages table (last page reached per "date_slot" key)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS task_pages (
+                key VARCHAR(255) PRIMARY KEY,
+                page INTEGER NOT NULL
+            )
+        ''')
+
+        # Create revisions table (spaced-repetition done flag per revision key)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS revisions (
+                key VARCHAR(255) PRIMARY KEY,
+                done INTEGER NOT NULL
+            )
+        ''')
+
         conn.commit()
         conn.close()
 
@@ -196,6 +212,79 @@ def set_study_time(key, seconds):
         conn.close()
     except Exception as e:
         print(f"Database error in set_study_time: {e}")
+
+def load_task_pages():
+    """Load all last-page records ({"date_slot": page})"""
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT key, page FROM task_pages')
+        rows = cursor.fetchall()
+        conn.close()
+        return {key: int(page) for key, page in rows}
+    except Exception as e:
+        print(f"Database error in load_task_pages: {e}")
+        return {}
+
+def set_task_page(key, page):
+    """Upsert the last page reached for a task — monotonic (never decreases),
+    so a stale device syncing late can't rewind a page recorded elsewhere."""
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+
+        if db_type == "postgres":
+            cursor.execute('''
+                INSERT INTO task_pages (key, page) VALUES (%s, %s)
+                ON CONFLICT (key) DO UPDATE
+                SET page = GREATEST(task_pages.page, EXCLUDED.page)
+            ''', (key, page))
+        else:
+            cursor.execute('''
+                INSERT INTO task_pages (key, page) VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE
+                SET page = MAX(page, excluded.page)
+            ''', (key, page))
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Database error in set_task_page: {e}")
+
+def load_revisions():
+    """Load all revision done-flags ({"key": bool})"""
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT key, done FROM revisions')
+        rows = cursor.fetchall()
+        conn.close()
+        return {key: bool(done) for key, done in rows}
+    except Exception as e:
+        print(f"Database error in load_revisions: {e}")
+        return {}
+
+def set_revision(key, done):
+    """Upsert a revision done-flag — a plain overwrite (boolean, not monotonic)."""
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+
+        if db_type == "postgres":
+            cursor.execute('''
+                INSERT INTO revisions (key, done) VALUES (%s, %s)
+                ON CONFLICT (key) DO UPDATE SET done = EXCLUDED.done
+            ''', (key, 1 if done else 0))
+        else:
+            cursor.execute(
+                'INSERT OR REPLACE INTO revisions (key, done) VALUES (?, ?)',
+                (key, 1 if done else 0),
+            )
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Database error in set_revision: {e}")
 
 def get_preference(key, default=None):
     """Get a preference value by key"""

@@ -5,7 +5,12 @@ import { DayPlan, Slot, SubjectStats } from './interfaces';
 import { TodayView } from './components/TodayView';
 import { ProgressView, DayStat } from './components/ProgressView';
 
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { API } from './api';
+import { personalPace, loadStudyTime } from './insights';
+
+// Native-only bridge: hands the fetched plan to the home-screen widget
+const WidgetBridge = registerPlugin<{ setPlan(opts: { json: string }): Promise<void> }>('WidgetBridge');
 
 const CACHE_KEY = 'planner-cache-v1';
 
@@ -30,6 +35,9 @@ export default function App() {
         setSchedule(p.data);
         setStats(st);
         try { localStorage.setItem(CACHE_KEY, JSON.stringify({ plan: p.data, stats: st })); } catch { /* quota */ }
+        if (Capacitor.isNativePlatform()) {
+            WidgetBridge.setPlan({ json: JSON.stringify(p.data) }).catch(() => { /* widget bridge unavailable */ });
+        }
     });
 
     useEffect(() => {
@@ -165,6 +173,10 @@ export default function App() {
         window.scrollTo(0, 0);
     }, [view]);
 
+    // Learned per-subject pace from completed, well-studied blocks (localStorage
+    // is kept fresh by TodayView; recomputed whenever the plan changes)
+    const pace = useMemo(() => personalPace(schedule, loadStudyTime()), [schedule]);
+
     const subjectsList = Object.entries(stats).map(([name, s]) => ({
         name,
         pct: s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0,
@@ -233,9 +245,11 @@ export default function App() {
                             todayStr={todayStr}
                             backlog={backlog}
                             upcoming={upcoming}
+                            plan={schedule}
                             toggle={toggle}
                             busy={busy}
                             streak={streak}
+                            pace={pace}
                         />
                     )}
                     {view === 'progress' && (
