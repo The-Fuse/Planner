@@ -1,0 +1,24 @@
+name: Daily study notification
+
+# Render's free tier spins the service down when idle, so the backend's own
+# in-process scheduler can't be relied on to fire at 06:00 — the process may
+# not be running at all. This workflow wakes the service and asks it to send.
+on:
+  schedule:
+    - cron: '30 0 * * *'   # 00:30 UTC = 06:00 IST
+  workflow_dispatch:        # lets you trigger a test run by hand
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake the backend (free tier cold start)
+        run: |
+          curl -sS --max-time 120 --retry 5 --retry-all-errors --retry-delay 15 \
+            "https://planner-936q.onrender.com/api/health" || true
+
+      - name: Trigger the daily notification
+        run: |
+          curl -sS --max-time 120 --retry 3 --retry-all-errors --retry-delay 15 \
+            -X POST "https://planner-936q.onrender.com/api/notify" \
+            -w '\nHTTP %{http_code}\n'

@@ -268,7 +268,15 @@ function SwipeRow({
     return (
         // Container owns the corner radius and clips square children, so the
         // action panel's edge meets the card flush (no rounded-corner gap).
-        <div className="relative overflow-hidden" style={{ borderRadius: radius, boxShadow: shadow ?? '0 8px 24px -16px rgba(0,0,0,0.4)', border }}>
+        <div
+            className="relative overflow-hidden"
+            style={{
+                borderRadius: radius,
+                // Only the outer lift/glow here — the glass edge is an overlay
+                // below, because a child's backdrop-filter paints over insets.
+                boxShadow: shadow ?? '0 8px 24px -16px rgba(0,0,0,0.4)',
+            }}
+        >
             {/* Trailing actions, revealed from the right */}
             <motion.div className="absolute inset-y-0 right-0 flex" style={{ width: panelW, opacity: panelOpacity }}>
                 {actions.map((a, i) => (
@@ -299,6 +307,18 @@ function SwipeRow({
             >
                 {children}
             </motion.div>
+            {/* Glass edge drawn above the content so the card's backdrop-filter
+                can't paint over it, and it traces the container's radius.
+                Matches .glass-card exactly: hairline top edge, no border. */}
+            <div
+                aria-hidden
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                    borderRadius: radius,
+                    border,
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+                }}
+            />
         </div>
     );
 }
@@ -1192,9 +1212,12 @@ export function TodayView({
     };
 
     // Record a chosen page: bump local state (monotonic) and post immediately
-    const setTaskPage = (key: string, page: number) => {
-        setTaskPages(prev => ({ ...prev, [key]: Math.max(prev[key] || 0, page) }));
-        axios.post(`${API}/api/task-pages`, null, { params: { key, page } }).catch(() => { /* retry next time */ });
+    /** `exact` = a deliberate edit, which may also correct the page downwards.
+        Automatic writes stay monotonic so a stale sync can't rewind progress. */
+    const setTaskPage = (key: string, page: number, exact = false) => {
+        setTaskPages(prev => ({ ...prev, [key]: exact ? page : Math.max(prev[key] || 0, page) }));
+        axios.post(`${API}/api/task-pages`, null, { params: { key, page, exact } })
+            .catch(() => { /* retry next time */ });
     };
 
     const pushStudy = (key: string, seconds: number) => {
@@ -1414,7 +1437,7 @@ export function TodayView({
                         >
                         <SwipeRow
                             radius={24}
-                            shadow={`inset 0 1px 0 rgba(255,255,255,0.08), 0 16px 40px -20px ${heroColor.hex}40`}
+                            shadow={`0 16px 40px -20px ${heroColor.hex}40`}
                             border={`1px solid ${heroColor.hex}2b`}
                             actions={[{
                                 icon: 'bookmark_add', label: 'Pages', hex: heroColor.hex,
@@ -1602,7 +1625,7 @@ export function TodayView({
                                             onAction: () => setPageEditTarget({ slot, date: dateStr }),
                                         }]}
                                     >
-                                        <div className="glass-card px-4 py-4">
+                                        <div className="glass-flat px-4 py-4">
                                             <CompactRow
                                                 slot={slot} date={dateStr} busy={busy} toggle={toggle} meta={slot.name}
                                                 progress={progressOf(slot, dateStr)}
@@ -1705,7 +1728,7 @@ export function TodayView({
                                                     onAction: () => setPageEditTarget({ slot: item.slot, date: item.date }),
                                                 }]}
                                             >
-                                                <div className="glass-card px-4 py-4">
+                                                <div className="glass-flat px-4 py-4">
                                                     <CompactRow
                                                         slot={{ ...item.slot, completed: clearing.has(id) }}
                                                         date={item.date}
@@ -1922,7 +1945,8 @@ export function TodayView({
                         initialPage={taskPages[studyKeyOf(pageEditTarget.date, pageEditTarget.slot.name)]
                             ?? pageRangeOf(pageEditTarget.slot.task).minStart}
                         onSave={page => {
-                            setTaskPage(studyKeyOf(pageEditTarget.date, pageEditTarget.slot.name), page);
+                            // Deliberate edit — authoritative, so it can lower the page too
+                            setTaskPage(studyKeyOf(pageEditTarget.date, pageEditTarget.slot.name), page, true);
                             setPageEditTarget(null);
                         }}
                         onClose={() => setPageEditTarget(null)}

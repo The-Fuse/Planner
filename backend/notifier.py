@@ -67,32 +67,40 @@ def get_today_backlog_notification(schedule_cache, completion_status):
     """
     today_str = _today_ist().isoformat()
 
-    # Collect all past incomplete slots grouped by subject
-    backlog_by_subject = {"Economy": [], "Polity": [], "History": []}
+    # Collect all past incomplete slots grouped by subject. Subjects are taken
+    # from the plan itself — hardcoding them silently dropped every slot when
+    # the syllabus changed, so nothing was ever sent.
+    backlog_by_subject = {}
 
     for day in schedule_cache:
         if day["date"] >= today_str:
             continue
         for slot in day["slots"]:
             subj = slot.get("subject")
-            if subj not in backlog_by_subject:
+            if not subj or subj in ("Revision", "Buffer"):
                 continue
             key = f"{day['date']}_{slot['name']}"
             if not completion_status.get(key, False) and slot.get("task") != "Revision":
-                backlog_by_subject[subj].append({"slot": slot, "date": day["date"]})
+                backlog_by_subject.setdefault(subj, []).append({"slot": slot, "date": day["date"]})
 
     # Also include today's pending slots as reminders
     today_slots = []
     for day in schedule_cache:
         if day["date"] == today_str:
             for slot in day["slots"]:
+                subj = slot.get("subject")
+                if not subj or subj in ("Revision", "Buffer"):
+                    continue
                 key = f"{day['date']}_{slot['name']}"
                 if not completion_status.get(key, False) and slot.get("task") != "Revision":
-                    today_slots.append({"slot": slot, "date": day["date"], "subject": slot.get("subject")})
+                    today_slots.append({"slot": slot, "date": day["date"], "subject": subj})
             break
 
-    # Determine what to notify about — pick the top backlog subject
-    priority_order = ["Economy", "Polity", "History"]
+    # Oldest backlog first; for today's tasks, plan order (Morning before Evening)
+    priority_order = sorted(
+        backlog_by_subject,
+        key=lambda s: backlog_by_subject[s][0]["date"],
+    )
     is_backlog = True
 
     chosen_subject = None
@@ -104,16 +112,12 @@ def get_today_backlog_notification(schedule_cache, completion_status):
             chosen_items = backlog_by_subject[subj]
             break
 
-    # If no backlog, fall back to today's tasks
+    # If no backlog, fall back to today's tasks (first one in plan order)
     if not chosen_subject:
         is_backlog = False
         if today_slots:
-            for subj in priority_order:
-                items = [t for t in today_slots if t["subject"] == subj]
-                if items:
-                    chosen_subject = subj
-                    chosen_items = items
-                    break
+            chosen_subject = today_slots[0]["subject"]
+            chosen_items = [t for t in today_slots if t["subject"] == chosen_subject]
         if not chosen_subject:
             return None
 

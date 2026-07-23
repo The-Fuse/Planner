@@ -226,25 +226,37 @@ def load_task_pages():
         print(f"Database error in load_task_pages: {e}")
         return {}
 
-def set_task_page(key, page):
-    """Upsert the last page reached for a task — monotonic (never decreases),
-    so a stale device syncing late can't rewind a page recorded elsewhere."""
+def set_task_page(key, page, exact=False):
+    """Upsert the last page reached for a task.
+
+    Default is monotonic (never decreases) so a stale device syncing late can't
+    rewind a page recorded elsewhere. `exact=True` overwrites — used when the
+    user deliberately sets the page, including correcting it downwards."""
     try:
         conn, db_type = get_db_connection()
         cursor = conn.cursor()
 
         if db_type == "postgres":
-            cursor.execute('''
-                INSERT INTO task_pages (key, page) VALUES (%s, %s)
-                ON CONFLICT (key) DO UPDATE
-                SET page = GREATEST(task_pages.page, EXCLUDED.page)
-            ''', (key, page))
+            if exact:
+                cursor.execute('''
+                    INSERT INTO task_pages (key, page) VALUES (%s, %s)
+                    ON CONFLICT (key) DO UPDATE SET page = EXCLUDED.page
+                ''', (key, page))
+            else:
+                cursor.execute('''
+                    INSERT INTO task_pages (key, page) VALUES (%s, %s)
+                    ON CONFLICT (key) DO UPDATE
+                    SET page = GREATEST(task_pages.page, EXCLUDED.page)
+                ''', (key, page))
         else:
-            cursor.execute('''
-                INSERT INTO task_pages (key, page) VALUES (?, ?)
-                ON CONFLICT(key) DO UPDATE
-                SET page = MAX(page, excluded.page)
-            ''', (key, page))
+            if exact:
+                cursor.execute('INSERT OR REPLACE INTO task_pages (key, page) VALUES (?, ?)', (key, page))
+            else:
+                cursor.execute('''
+                    INSERT INTO task_pages (key, page) VALUES (?, ?)
+                    ON CONFLICT(key) DO UPDATE
+                    SET page = MAX(page, excluded.page)
+                ''', (key, page))
 
         conn.commit()
         conn.close()

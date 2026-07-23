@@ -4,6 +4,7 @@ import re
 import json
 import atexit
 import datetime
+import zoneinfo
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,14 +50,21 @@ schedule_cache = generate_schedule()
 
 
 def _fire_daily_notification():
-    """Called by APScheduler every day at 8:00 AM."""
+    """Called by APScheduler every day at 06:00 IST — best effort only, since
+    a sleeping free-tier instance may not be running. The GitHub Actions cron
+    is the reliable trigger; both share the same once-per-day guard."""
     topic = get_preference("ntfy_topic")
     if not topic:
+        return
+    today_ist = datetime.datetime.now(tz=zoneinfo.ZoneInfo("Asia/Kolkata")).date().isoformat()
+    if get_preference("last_notified") == today_ist:
         return
     # Regenerate schedule so the job always uses fresh date-based data
     current_schedule = generate_schedule()
     current_status = load_progress()
-    send_daily_notification(current_schedule, current_status, topic)
+    result = send_daily_notification(current_schedule, current_status, topic)
+    if result.get("status") == "sent":
+        set_preference("last_notified", today_ist)
 
 
 # Set up daily scheduler — fires at 06:00 every day
@@ -141,11 +149,14 @@ def get_task_pages():
     return load_task_pages()
 
 @app.post("/api/task-pages")
-def post_task_page(key: str, page: int):
-    """Record the last page reached for a task (monotonic upsert)."""
+def post_task_page(key: str, page: int, exact: bool = False):
+    """Record the last page reached for a task.
+
+    Monotonic by default; `exact=true` overwrites so a deliberate edit can
+    also correct the page downwards."""
     if page <= 0 or page >= 100000 or len(key) > 255:
         raise HTTPException(status_code=400, detail="Invalid task-pages payload")
-    set_task_page(key, page)
+    set_task_page(key, page, exact=exact)
     return {"status": "success", "key": key, "page": page}
 
 @app.get("/api/revisions")
@@ -249,17 +260,26 @@ def replan():
 
 
 @app.post("/api/notify")
-def trigger_notification():
+def trigger_notification(force: bool = False):
     """
-    Manually trigger a daily backlog notification using the saved ntfy_topic.
+    Send the daily backlog notification using the saved ntfy_topic.
+
+    Idempotent per day (IST) so the external cron and the in-process scheduler
+    can both call it without double-notifying; pass force=true to override.
     """
     topic = get_preference("ntfy_topic")
     if not topic:
         raise HTTPException(status_code=400, detail="No ntfy topic configured. Save one via POST /api/preferences with key=ntfy_topic.")
 
+    today_ist = datetime.datetime.now(tz=zoneinfo.ZoneInfo("Asia/Kolkata")).date().isoformat()
+    if not force and get_preference("last_notified") == today_ist:
+        return {"status": "already_sent", "date": today_ist}
+
     current_schedule = generate_schedule()
     current_status = load_progress()
     result = send_daily_notification(current_schedule, current_status, topic)
+    if result.get("status") == "sent":
+        set_preference("last_notified", today_ist)
     return result
 
 if __name__ == "__main__":

@@ -40,6 +40,14 @@
     transform: scale(0.985);
   }
 
+  /* Glass surface with no edge treatment of its own — for swipe rows, where
+     the clipping container draws the hairline/lift so they follow its radius */
+  .glass-flat {
+    background: rgba(255, 255, 255, 0.035);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+  }
+
   /* Small glass pill — for chips and stat badges */
   .glass-chip {
     background: rgba(255, 255, 255, 0.05);
