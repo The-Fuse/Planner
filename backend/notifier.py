@@ -7,24 +7,19 @@ import zoneinfo
 
 _IST = zoneinfo.ZoneInfo("Asia/Kolkata")
 
-# URL to open when the notification is tapped.
-# Set APP_URL env var to your production frontend (e.g. https://planner-936q.onrender.com).
-# Falls back to localhost for local testing.
-APP_URL = os.environ.get("APP_URL", "http://localhost:5174")
+# Opened when the notification is tapped. Defaults to the app's custom URL
+# scheme so it launches the installed iOS app; set APP_URL to an https URL
+# instead if you'd rather it open the web version.
+APP_URL = os.environ.get("APP_URL", "upscplanner://open")
 
-# Icon shown in the notification — served from the frontend's public folder
-ICON_URL = f"{APP_URL}/favicon.png"
-
-EXAM_DATE = datetime.date(2026, 5, 24)
+# Icon shown in the notification — only meaningful over http(s); a custom
+# scheme can't serve one, so leave it unset in that case.
+ICON_URL = f"{APP_URL}/favicon.png" if APP_URL.startswith("http") else None
 
 
 def _today_ist() -> datetime.date:
     return datetime.datetime.now(tz=_IST).date()
 
-
-def _days_to_exam():
-    delta = EXAM_DATE - _today_ist()
-    return max(delta.days, 0)
 
 
 def _fmt_date(date_str: str) -> str:
@@ -129,7 +124,6 @@ def get_today_backlog_notification(schedule_cache, completion_status):
     matches = _parse_chapters(task_text)
     chapters_block = _build_chapters_block(matches)
 
-    days_left = _days_to_exam()
     formatted_date = _fmt_date(item_date)
 
     # ── Title ───────────────────────────────────────────────────
@@ -149,12 +143,12 @@ def get_today_backlog_notification(schedule_cache, completion_status):
     else:
         lines.append(task_text)
 
-    lines.append("")
-
     if is_backlog:
-        lines.append(f"⏳ {days_left} days to exam")
-    else:
-        lines.append(f"⏳ {days_left} days to exam  ·  {slot_name}")
+        lines.append("")
+        lines.append(f"📅 from {formatted_date}")
+    elif slot_name:
+        lines.append("")
+        lines.append(f"🕘 {slot_name}")
 
     message = "\n".join(lines)
 
