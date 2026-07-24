@@ -8,3 +8,7 @@ dist/
 .env
 progress.json
 *.pdf
+
+# iOS build artifacts
+frontend/ios/App/build/
+frontend/ios/App/CapApp-SPM/build/

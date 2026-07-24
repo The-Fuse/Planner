@@ -3,12 +3,19 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from '
 import axios from 'axios';
 import { API } from '../api';
 import { DayPlan, Slot } from '../interfaces';
-import { parseItems } from './TaskContent';
+import { parseItems, summarizeTask } from './TaskContent';
 import { subjectColor } from '../subjectColors';
 import { useSettings } from '../settings';
 import { calibratedMinutes, pagesInTask, fmtMinutes } from '../insights';
-import { dueRevisions } from '../revision';
+import {
+    dueReviews, applyRating, previewInterval,
+    Rating, Confidence, ReviewState, DueReview,
+} from '../revision';
 import { ensurePermission, schedulePhaseEnd, cancelPhaseEnd } from '../notify';
+import {
+    PomodoroState, PomodoroAction, startPomodoroActivity, updatePomodoroActivity,
+    endPomodoroActivity, onPomodoroAction,
+} from '../liveActivity';
 
 
 /** Task's page span: min start, max end, and pages treated as one continuous range */
@@ -108,10 +115,16 @@ function loadTaskPages(): Record<string, number> {
     try { return JSON.parse(localStorage.getItem(PAGES_KEY) || '{}'); } catch { return {}; }
 }
 
-/** Revision done-flags per revision key, persisted on device */
-const REVISIONS_KEY = 'planner-revisions-v1';
-function loadRevisions(): Record<string, boolean> {
-    try { return JSON.parse(localStorage.getItem(REVISIONS_KEY) || '{}'); } catch { return {}; }
+/** SM-2 review states per chapter slug, persisted on device */
+const REVIEWS_KEY = 'planner-reviews-v1';
+function loadReviews(): Record<string, ReviewState> {
+    try { return JSON.parse(localStorage.getItem(REVIEWS_KEY) || '{}'); } catch { return {}; }
+}
+
+/** Confidence overrides per chapter slug, persisted on device */
+const CONFIDENCE_KEY = 'planner-confidence-v1';
+function loadConfidence(): Record<string, Confidence> {
+    try { return JSON.parse(localStorage.getItem(CONFIDENCE_KEY) || '{}'); } catch { return {}; }
 }
 
 /** Habit marks (newspaper, answer writing) keyed like "habit_..._slot", on device */
@@ -456,29 +469,65 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     Focus seconds are reported up via onStudyTick and persisted per task. */
 const BREAK_HEX = '#68d3ff';
 
+/** A running session, mirrored to storage so tapping the notification (or any
+    cold start) lands back on the timer instead of the day view. The countdown
+    is timestamp-driven, so restoring these fields resumes it exactly. */
+const LIVE_SESSION_KEY = 'liveFocusSession';
+
+interface StoredSession {
+    date: string;
+    slotName: string;
+    phase: 'focus' | 'break';
+    phaseStartedAt: number;
+    phaseBaseElapsed: number;
+    paused: boolean;
+    cycles: number;
+    longBreak: boolean;
+}
+
+function readStoredSession(): StoredSession | null {
+    try {
+        const raw = localStorage.getItem(LIVE_SESSION_KEY);
+        if (!raw) return null;
+        const s = JSON.parse(raw) as StoredSession;
+        // A session nobody came back to within 6h is abandoned, not resumable.
+        if (Date.now() - s.phaseStartedAt > 6 * 3600_000) {
+            localStorage.removeItem(LIVE_SESSION_KEY);
+            return null;
+        }
+        return s;
+    } catch { return null; }
+}
+
+function clearStoredSession() {
+    try { localStorage.removeItem(LIVE_SESSION_KEY); } catch { /* quota */ }
+}
+
 function FocusSheet({
-    slot, studiedSeconds, onStudyTick, onClose, onDone, onStopHere, busy, pace,
+    slot, date, studiedSeconds, onStudyTick, onClose, onDone, onStopHere, busy, pace, resume,
 }: {
-    slot: Slot; studiedSeconds: number; onStudyTick: () => void;
+    slot: Slot; date: string; studiedSeconds: number; onStudyTick: () => void;
     onClose: () => void; onDone: () => void;
     /** Record the page stopped at, then close without completing */
     onStopHere: (page: number) => void;
     busy: boolean;
     /** Learned per-subject pace, for a calibrated "planned ~" estimate */
     pace: Record<string, number>;
+    /** Session picked back up after a relaunch, rather than started fresh */
+    resume?: StoredSession | null;
 }) {
     const [settings, setSettings] = useSettings();
-    const [phase, setPhase] = useState<'focus' | 'break'>('focus');
+    const [phase, setPhase] = useState<'focus' | 'break'>(resume?.phase ?? 'focus');
     // Timestamp-driven countdown: wall-clock survives a suspended/locked phone.
     // phaseStartedAt = when the current running span began; phaseBaseElapsed =
     // seconds already banked in this phase before that span (for pause support).
-    const [phaseStartedAt, setPhaseStartedAt] = useState(() => Date.now());
-    const [phaseBaseElapsed, setPhaseBaseElapsed] = useState(0);
+    const [phaseStartedAt, setPhaseStartedAt] = useState(() => resume?.phaseStartedAt ?? Date.now());
+    const [phaseBaseElapsed, setPhaseBaseElapsed] = useState(resume?.phaseBaseElapsed ?? 0);
     // Pure re-render heartbeat — the countdown VALUE derives from timestamps,
     // not from counting these ticks.
     const [, setTick] = useState(0);
-    const [paused, setPaused] = useState(false);
-    const [cycles, setCycles] = useState(0);
+    const [paused, setPaused] = useState(resume?.paused ?? false);
+    const [cycles, setCycles] = useState(resume?.cycles ?? 0);
     // Focus seconds accumulated this session — gates the "where did you stop?" step
     const [sessionSecs, setSessionSecs] = useState(0);
     // "Where did you stop?" interstitial + the page being picked
@@ -490,7 +539,7 @@ function FocusSheet({
     const [recall, setRecall] = useState(false);
     const [recallLeft, setRecallLeft] = useState(60);
     // Every 4th focus phase earns the longer break
-    const [longBreak, setLongBreak] = useState(false);
+    const [longBreak, setLongBreak] = useState(resume?.longBreak ?? false);
     const [interruptions, setInterruptions] = useState(0);
 
     const chime = (kind: 'break' | 'focus') => { if (settings.chimes) playChime(kind); };
@@ -545,11 +594,55 @@ function FocusSheet({
         }
     }, [phase, phaseStartedAt, phaseBaseElapsed, paused, phaseLen, longBreak]);
 
+    // Live Activity: the same countdown on the Lock Screen and in the Dynamic
+    // Island. Driven by the phase timestamps, so iOS keeps ticking it natively
+    // while the app is backgrounded — no updates needed between phases.
+    const activityStarted = useRef(false);
+    const lastActivityPhase = useRef(phase);
+    useEffect(() => {
+        const endsAt = phaseStartedAt + (phaseLen - phaseBaseElapsed) * 1000;
+        const state: PomodoroState = {
+            phase,
+            endsAt,
+            // Virtual phase start, so the progress bar spans the whole phase
+            // even after a pause banked part of it.
+            startedAt: phaseStartedAt - phaseBaseElapsed * 1000,
+            paused,
+            remaining: Math.ceil(Math.max(0, paused ? phaseLen - phaseBaseElapsed : (endsAt - Date.now()) / 1000)),
+            cycles,
+            longBreak,
+            // Only a phase flip is worth a banner; pause/resume update quietly.
+            alert: lastActivityPhase.current !== phase,
+        };
+        lastActivityPhase.current = phase;
+        // `slot.name` is the time-of-day block ("Morning"); the reading title is
+        // what identifies the session at a glance.
+        const title = summarizeTask(slot.task);
+        if (activityStarted.current) {
+            updatePomodoroActivity(state);
+        } else {
+            activityStarted.current = true;
+            startPomodoroActivity(
+                { subject: slot.subject, task: title, colorHex: subjectColor(slot.subject).hex },
+                state,
+            );
+        }
+        // Mirrored to storage so a tap on the notification (which cold-starts
+        // the web layer) reopens this timer rather than the day view.
+        try {
+            localStorage.setItem(LIVE_SESSION_KEY, JSON.stringify({
+                date, slotName: slot.name, phase, phaseStartedAt, phaseBaseElapsed,
+                paused, cycles, longBreak,
+            } satisfies StoredSession));
+        } catch { /* quota */ }
+    }, [phase, phaseStartedAt, phaseBaseElapsed, paused, phaseLen, longBreak, cycles]);
+
     // Ask notification permission once when a session opens; cancel any
-    // pending phase-end when it closes (unmount covers the close button too).
+    // pending phase-end and tear down the Live Activity when it closes
+    // (unmount covers the close button too).
     useEffect(() => {
         ensurePermission();
-        return () => { cancelPhaseEnd(); };
+        return () => { cancelPhaseEnd(); endPomodoroActivity(); clearStoredSession(); };
     }, []);
 
     // Screen wake lock — keep the display on through a session, re-acquire on return
@@ -627,6 +720,20 @@ function FocusSheet({
         if (settings.recall && sessionSecs >= 600) setRecall(true);
         else onDone();
     };
+
+    // Controls tapped on the Live Activity itself. Routed through a ref so the
+    // subscription is set up once, but always sees current state.
+    const actionRef = useRef<(a: PomodoroAction) => void>(() => { /* set below */ });
+    actionRef.current = (a: PomodoroAction) => {
+        if (a === 'pause' && !paused) togglePause();
+        else if (a === 'resume' && paused) togglePause();
+        else if (a === 'restart') {
+            setPhaseBaseElapsed(0);
+            setPhaseStartedAt(Date.now());
+            setPaused(false);
+        } else if (a === 'stop') onClose();
+    };
+    useEffect(() => onPomodoroAction(a => actionRef.current(a)), []);
 
     // Recall countdown — auto-advances to completion at zero
     useEffect(() => {
@@ -1090,6 +1197,121 @@ function PagePicker({
     );
 }
 
+/** Confidence → dot colour + label. Warm = weak, blue = medium, green = strong. */
+const CONF_DOT: Record<Confidence, { hex: string; label: string }> = {
+    weak:   { hex: '#f6a58a', label: 'Weak' },
+    medium: { hex: '#adc6ff', label: 'Medium' },
+    strong: { hex: '#7ee0a8', label: 'Strong' },
+};
+
+/** Recall ratings, in escalating-ease order, with their button colours. */
+const RATINGS: { key: Rating; label: string; hex: string }[] = [
+    { key: 'again', label: 'Again', hex: '#f6a58a' },
+    { key: 'hard',  label: 'Hard',  hex: '#f5c76b' },
+    { key: 'good',  label: 'Good',  hex: '#adc6ff' },
+    { key: 'easy',  label: 'Easy',  hex: '#7ee0a8' },
+];
+
+/** Compact "next due" label for a rating preview: days, or months past ~30d */
+function fmtDue(days: number): string {
+    return days >= 30 ? `${Math.round(days / 30)}mo` : `${days}d`;
+}
+
+/** Full-screen recall: read the chapter, recall it out loud, then self-rate.
+    The rating advances the SM-2 state; the confidence chips override the level. */
+function RecallSheet({
+    rev, onRate, onSetConfidence, onClose,
+}: {
+    rev: DueReview;
+    onRate: (rating: Rating) => void;
+    onSetConfidence: (level: Confidence) => void;
+    onClose: () => void;
+}) {
+    const c = subjectColor(rev.subject);
+    const [conf, setConf] = useState<Confidence>(rev.confidence);
+
+    const pickConfidence = (level: Confidence) => {
+        setConf(level);
+        onSetConfidence(level);
+    };
+    const rate = (rating: Rating) => { onRate(rating); onClose(); };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 32 }}
+            className="fixed inset-0 z-[70] flex flex-col bg-[#060808]/95 backdrop-blur-2xl px-8 pb-10 pt-[calc(env(safe-area-inset-top)+1.5rem)]"
+        >
+            <div className="flex justify-between">
+                <span className="text-[11px] font-semibold tracking-[0.14em] uppercase text-on-surface-variant/50 self-center">
+                    Recall
+                </span>
+                <button
+                    aria-label="Close recall"
+                    className="w-10 h-10 rounded-full glass-chip flex items-center justify-center border-0 cursor-pointer text-on-surface-variant/70"
+                    onClick={onClose}
+                >
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center text-center min-h-0">
+                <p className={`text-[11px] font-semibold tracking-[0.14em] uppercase ${c.text} opacity-80`}>{rev.subject}</p>
+                <h2 className="font-display text-[23px] font-semibold text-on-surface tracking-tight mt-2 max-w-[300px] leading-snug">
+                    {rev.chapter}
+                </h2>
+                <p className="text-[12px] text-on-surface-variant/45 mt-2 tabular-nums">{rev.pages}</p>
+                <p className="text-[14px] leading-snug text-on-surface/75 mt-8 max-w-[260px]">
+                    Recall the key points out loud, then rate how it went
+                </p>
+
+                {/* Confidence override — seeded from the derived level */}
+                <div className="flex items-center gap-2 mt-8">
+                    {(['weak', 'medium', 'strong'] as const).map(level => {
+                        const active = conf === level;
+                        const d = CONF_DOT[level];
+                        return (
+                            <button
+                                key={level}
+                                className="rounded-full px-3.5 py-1.5 text-[12px] font-medium border-0 cursor-pointer flex items-center gap-1.5 transition-colors"
+                                style={{
+                                    background: active ? `${d.hex}24` : 'rgba(255,255,255,0.04)',
+                                    color: active ? d.hex : 'rgba(255,255,255,0.4)',
+                                }}
+                                onClick={() => pickConfidence(level)}
+                            >
+                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: d.hex, opacity: active ? 1 : 0.5 }} />
+                                {d.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div>
+                <p className="text-[11px] font-medium text-on-surface-variant/45 text-center mb-3">How well did you recall it?</p>
+                <div className="grid grid-cols-4 gap-2.5">
+                    {RATINGS.map(r => (
+                        <button
+                            key={r.key}
+                            className="rounded-2xl py-3.5 flex flex-col items-center gap-1 border-0 cursor-pointer active:scale-[0.97] transition-transform"
+                            style={{ background: `${r.hex}1c`, border: `1.5px solid ${r.hex}45`, color: r.hex }}
+                            onClick={() => rate(r.key)}
+                        >
+                            <span className="text-[14px] font-semibold">{r.label}</span>
+                            <span className="text-[11px] font-medium tabular-nums opacity-70">
+                                {fmtDue(previewInterval(rev.state, r.key))}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
 export function TodayView({
     today, todayStr, backlog, upcoming, plan, toggle, busy, streak, pace = {},
 }: {
@@ -1116,6 +1338,9 @@ export function TodayView({
     // localStorage is the offline cache; the backend is the source of truth,
     // merged key-wise by max so no device ever loses recorded time.
     const [focusTarget, setFocusTarget] = useState<{ slot: Slot; date: string } | null>(null);
+    // A session left running when the app was closed. Read once; consumed by the
+    // effect below as soon as the plan it refers to is loaded.
+    const [pendingResume, setPendingResume] = useState<StoredSession | null>(() => readStoredSession());
     // Direct page-logging (no pomodoro needed)
     const [pageEditTarget, setPageEditTarget] = useState<{ slot: Slot; date: string } | null>(null);
     const [studyTime, setStudyTime] = useState<Record<string, number>>(loadStudyTime);
@@ -1125,9 +1350,11 @@ export function TodayView({
     // Last page reached per task ("date_slot" → page). Same offline-cache /
     // backend-source-of-truth story as studyTime, merged key-wise by max.
     const [taskPages, setTaskPages] = useState<Record<string, number>>(loadTaskPages);
-    // Revision done-flags: localStorage seeds instant paint, backend is truth.
-    const [revisions, setRevisions] = useState<Record<string, boolean>>(loadRevisions);
-    const [revClearing, setRevClearing] = useState<Set<string>>(new Set());
+    // SM-2 review states + confidence overrides: localStorage seeds instant
+    // paint, backend is truth. The recall sheet opens over a due chapter.
+    const [reviews, setReviews] = useState<Record<string, ReviewState>>(loadReviews);
+    const [confidence, setConfidence] = useState<Record<string, Confidence>>(loadConfidence);
+    const [recallTarget, setRecallTarget] = useState<DueReview | null>(null);
     // Habit marks (newspaper, answer writing): localStorage seeds, server wins on merge.
     const [habits, setHabits] = useState<Record<string, boolean>>(loadHabits);
     const [habitBusy, setHabitBusy] = useState<Set<string>>(new Set());
@@ -1159,21 +1386,29 @@ export function TodayView({
         try { localStorage.setItem(PAGES_KEY, JSON.stringify(taskPages)); } catch { /* quota */ }
     }, [taskPages]);
 
-    // Revisions: merge server done-flags on mount (a done flag never un-does),
-    // mirror to localStorage on change
+    // Reviews: merge server state on mount (a review is a deliberate action
+    // synced immediately, so the server's state wins on conflict), mirror to
+    // localStorage on change
     useEffect(() => {
-        axios.get(`${API}/api/revisions`).then(res => {
-            const server: Record<string, boolean> = res.data && typeof res.data === 'object' ? res.data : {};
-            setRevisions(prev => {
-                const merged = { ...prev };
-                Object.entries(server).forEach(([k, v]) => { if (v) merged[k] = true; });
-                return merged;
-            });
+        axios.get(`${API}/api/reviews`).then(res => {
+            const server: Record<string, ReviewState> = res.data && typeof res.data === 'object' ? res.data : {};
+            setReviews(prev => ({ ...prev, ...server }));
         }).catch(() => { /* offline — local cache carries on */ });
     }, []);
     useEffect(() => {
-        try { localStorage.setItem(REVISIONS_KEY, JSON.stringify(revisions)); } catch { /* quota */ }
-    }, [revisions]);
+        try { localStorage.setItem(REVIEWS_KEY, JSON.stringify(reviews)); } catch { /* quota */ }
+    }, [reviews]);
+
+    // Confidence: same merge-server-wins story, mirror to localStorage on change
+    useEffect(() => {
+        axios.get(`${API}/api/confidence`).then(res => {
+            const server: Record<string, Confidence> = res.data && typeof res.data === 'object' ? res.data : {};
+            setConfidence(prev => ({ ...prev, ...server }));
+        }).catch(() => { /* offline — local cache carries on */ });
+    }, []);
+    useEffect(() => {
+        try { localStorage.setItem(CONFIDENCE_KEY, JSON.stringify(confidence)); } catch { /* quota */ }
+    }, [confidence]);
 
     // Habit marks: merge the server's "habit_" subset on mount (server wins),
     // mirror to localStorage on change
@@ -1200,15 +1435,19 @@ export function TodayView({
             .finally(() => setHabitBusy(prev => { const n = new Set(prev); n.delete(key); return n; }));
     };
 
-    // Tick a revision: show the check for 500ms, then mark done + post
-    const clearRevision = (key: string) => {
-        if (revClearing.has(key)) return;
-        setRevClearing(prev => new Set(prev).add(key));
-        window.setTimeout(() => {
-            setRevClearing(prev => { const n = new Set(prev); n.delete(key); return n; });
-            setRevisions(prev => ({ ...prev, [key]: true }));
-            axios.post(`${API}/api/revisions`, null, { params: { key, done: true } }).catch(() => { /* retry next mount */ });
-        }, 500);
+    // Rate a recall: advance the chapter's SM-2 state and post the full state.
+    const rateReview = (rev: DueReview, rating: Rating) => {
+        const next = applyRating(rev.state, rating, todayStr);
+        setReviews(prev => ({ ...prev, [rev.slug]: next }));
+        axios.post(`${API}/api/reviews`, { key: rev.slug, state: next })
+            .catch(() => { /* retry next mount */ });
+    };
+
+    // Set a chapter's confidence by hand (overrides the derived level)
+    const setChapterConfidence = (slug: string, level: Confidence) => {
+        setConfidence(prev => ({ ...prev, [slug]: level }));
+        axios.post(`${API}/api/confidence`, null, { params: { key: slug, level } })
+            .catch(() => { /* retry next mount */ });
     };
 
     // Record a chosen page: bump local state (monotonic) and post immediately
@@ -1239,6 +1478,23 @@ export function TodayView({
         });
     }, [studyTime]);
 
+    // Reopen a session that was still running when the app was last closed —
+    // this is what makes a notification tap land on the timer. Waits for the
+    // plan, since the slot has to be found before the sheet can mount.
+    useEffect(() => {
+        if (!pendingResume || focusTarget) return;
+        const day = plan.find(d => d.date === pendingResume.date);
+        const slot = day?.slots.find(s => s.name === pendingResume.slotName);
+        if (!day || !slot) {
+            // Plan hasn't arrived yet — leave it pending and try again on the
+            // next render. A slot that never shows up ages out of storage.
+            if (plan.length) { clearStoredSession(); setPendingResume(null); }
+            return;
+        }
+        if (slot.completed) { clearStoredSession(); setPendingResume(null); return; }
+        setFocusTarget({ slot, date: day.date });
+    }, [pendingResume, focusTarget, plan]);
+
     // Flush pending seconds when a session closes or the app is backgrounded
     useEffect(() => { if (!focusTarget) flushStudy(); }, [focusTarget]);
     useEffect(() => {
@@ -1250,8 +1506,12 @@ export function TodayView({
     // Opening a session is a tap — the moment to unlock audio on iOS
     const openFocus = (slot: Slot, date: string) => {
         getAudioCtx();
+        // A deliberate start is always a fresh timer, never a restored one.
+        setPendingResume(null);
         setFocusTarget({ slot, date });
     };
+    /** Close the sheet and drop any restored state along with it */
+    const closeFocus = () => { setPendingResume(null); setFocusTarget(null); };
     const addStudySecond = (key: string) =>
         setStudyTime(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
     /** 0..1 progress = the greater of time studied and pages read (0 when done) */
@@ -1359,8 +1619,8 @@ export function TodayView({
     const heroEst = hero ? (calibratedMinutes(hero, pace) ?? (typeof hero.minutes === 'number' && hero.minutes > 0 ? hero.minutes : null)) : null;
     const heroLoading = hero ? busy === `${dateStr}-${hero.name}` : false;
 
-    // Chapters due for a spaced-repetition revision today
-    const dueRevs = dueRevisions(plan, revisions, todayStr);
+    // Chapters due for a spaced-repetition recall today (weak-first, capped)
+    const dueRevs = dueReviews(plan, reviews, confidence, todayStr);
 
     // Practice habits — daily newspaper + weekly answer writing (kept out of ring/stats)
     const isoWeek = isoWeekId(new Date());
@@ -1372,10 +1632,10 @@ export function TodayView({
     const awDone = awSlots.every(s => habits[`${awDate}_${s}`]);
 
     return (
-        <main className="max-w-[560px] mx-auto pb-16">
+        <main className="max-w-[560px] lg:max-w-[980px] mx-auto pb-16">
             {/* ── Header: date + settings ── */}
             <header className="sticky-glass-header bg-[#060808]/70 backdrop-blur-lg md:static md:bg-transparent md:backdrop-blur-none px-6 z-40">
-                <div className="flex items-center justify-between gap-4 max-w-[560px] mx-auto">
+                <div className="flex items-center justify-between gap-4 max-w-[560px] lg:max-w-[980px] mx-auto">
                     <div className="min-w-0">
                         <p className="text-[13px] text-on-surface-variant/50 font-medium flex items-center gap-2">
                             {dateObj.toLocaleString('default', { weekday: 'long' })}
@@ -1400,7 +1660,13 @@ export function TodayView({
                 </div>
             </header>
 
-            <div className="px-6 pt-2">
+            {/* Two-column dashboard on large screens (landscape iPad / desktop);
+                a single column on phone and narrow tablets, source order intact.
+                Columns are equal-height with a centered gutter divider so the two
+                halves read as one balanced spread. */}
+            <div className="px-6 pt-2 lg:grid lg:grid-cols-2 lg:gap-x-0 lg:items-stretch">
+              {/* Primary column — the day's active work */}
+              <div className="lg:pr-10">
                 {/* ── Day complete ── */}
                 {allDone && (
                     <motion.section
@@ -1555,43 +1821,48 @@ export function TodayView({
                     )}
                 </AnimatePresence>
 
-                {/* ── Revise: spaced-repetition nudges, tick to clear ── */}
+                {/* ── Recall: spaced-repetition; tap a chapter to self-test ── */}
                 {dueRevs.length > 0 && (
                     <section className="mb-8">
-                        <SectionLabel>Revise · 10 min</SectionLabel>
+                        <SectionLabel>Recall · {dueRevs.length}</SectionLabel>
                         <div className="glass-card rounded-2xl px-4 py-1 overflow-hidden">
                             <AnimatePresence initial={false} mode="popLayout">
                                 {dueRevs.map(rev => {
                                     const c = subjectColor(rev.subject);
-                                    const inClearing = revClearing.has(rev.key);
+                                    const dot = CONF_DOT[rev.confidence];
                                     return (
                                         <motion.div
-                                            key={rev.key}
+                                            key={rev.slug}
                                             layout
                                             exit={{ opacity: 0, x: 56, scale: 0.97, transition: { duration: 0.3, ease: [0.4, 0, 1, 1] } }}
-                                            className="py-3 border-b border-white/[0.05] last:border-0"
+                                            className="border-b border-white/[0.05] last:border-0"
                                         >
-                                            <div className={`flex items-start gap-3.5 transition-opacity ${inClearing ? 'opacity-45' : ''}`}>
-                                                <CheckCircle
-                                                    completed={inClearing}
-                                                    loading={false}
-                                                    hex={c.hex}
-                                                    onClick={() => clearRevision(rev.key)}
+                                            <button
+                                                className="w-full flex items-center gap-3.5 py-3 text-left bg-transparent border-0 p-0 cursor-pointer"
+                                                onClick={() => setRecallTarget(rev)}
+                                                aria-label={`Recall ${rev.chapter}`}
+                                                title="Tap to recall"
+                                            >
+                                                <span
+                                                    className="w-2.5 h-2.5 rounded-full flex-shrink-0 ml-0.5"
+                                                    style={{ background: dot.hex, boxShadow: `0 0 0 3px ${dot.hex}1f` }}
+                                                    title={`${rev.confidence} recall`}
                                                 />
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-baseline justify-between gap-3">
-                                                        <p className={`text-[10px] font-semibold tracking-[0.09em] uppercase leading-tight ${c.text}`}>
+                                                <span className="flex-1 min-w-0">
+                                                    <span className="flex items-baseline justify-between gap-3">
+                                                        <span className={`text-[10px] font-semibold tracking-[0.09em] uppercase leading-tight ${c.text}`}>
                                                             {rev.subject}
-                                                        </p>
-                                                        <span className="text-[11px] text-on-surface-variant/50 tabular-nums flex-shrink-0">
-                                                            read {rev.daysAgo}d ago
                                                         </span>
-                                                    </div>
-                                                    <p className="text-[13px] text-on-surface/85 leading-snug truncate mt-1">
+                                                        <span className="text-[11px] text-on-surface-variant/50 tabular-nums flex-shrink-0">
+                                                            {rev.overdueDays <= 0 ? 'due today' : `${rev.overdueDays}d overdue`}
+                                                        </span>
+                                                    </span>
+                                                    <span className="block text-[13px] text-on-surface/85 leading-snug truncate mt-1">
                                                         {rev.chapter}
-                                                    </p>
-                                                </div>
-                                            </div>
+                                                    </span>
+                                                </span>
+                                                <span className="material-symbols-outlined text-[18px] text-on-surface-variant/35 flex-shrink-0">chevron_right</span>
+                                            </button>
                                         </motion.div>
                                     );
                                 })}
@@ -1654,6 +1925,10 @@ export function TodayView({
                     </section>
                 )}
 
+              </div>{/* end primary column */}
+
+              {/* Secondary column — recall, practice, and the backlog */}
+              <div className="lg:pl-10 lg:border-l lg:border-white/[0.06]">
                 {/* ── Practice: daily newspaper + weekly answer writing, tracked apart from the plan ── */}
                 <section className="mb-8">
                     <SectionLabel>Practice</SectionLabel>
@@ -1913,6 +2188,7 @@ export function TodayView({
                         </AnimatePresence>
                     </section>
                 )}
+              </div>{/* end secondary column */}
             </div>
 
             {/* ── Focus session ── */}
@@ -1920,18 +2196,20 @@ export function TodayView({
                 {focusTarget && (
                     <FocusSheet
                         slot={focusTarget.slot}
+                        date={focusTarget.date}
+                        resume={pendingResume}
                         studiedSeconds={studyTime[studyKeyOf(focusTarget.date, focusTarget.slot.name)] || 0}
                         onStudyTick={() => addStudySecond(studyKeyOf(focusTarget.date, focusTarget.slot.name))}
                         busy={busy === `${focusTarget.date}-${focusTarget.slot.name}`}
                         pace={pace}
-                        onClose={() => setFocusTarget(null)}
+                        onClose={closeFocus}
                         onDone={() => {
                             toggle(focusTarget.date, focusTarget.slot.name, focusTarget.slot.completed);
-                            setFocusTarget(null);
+                            closeFocus();
                         }}
                         onStopHere={page => {
                             setTaskPage(studyKeyOf(focusTarget.date, focusTarget.slot.name), page);
-                            setFocusTarget(null);
+                            closeFocus();
                         }}
                     />
                 )}
@@ -1950,6 +2228,18 @@ export function TodayView({
                             setPageEditTarget(null);
                         }}
                         onClose={() => setPageEditTarget(null)}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* ── Recall ── */}
+            <AnimatePresence>
+                {recallTarget && (
+                    <RecallSheet
+                        rev={recallTarget}
+                        onRate={rating => rateReview(recallTarget, rating)}
+                        onSetConfidence={level => setChapterConfidence(recallTarget.slug, level)}
+                        onClose={() => setRecallTarget(null)}
                     />
                 )}
             </AnimatePresence>

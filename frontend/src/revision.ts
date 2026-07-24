@@ -80,36 +80,124 @@ export function chapterCompletions(plan: DayPlan[]): ChapterCompletion[] {
     return out;
 }
 
-export interface DueRevision {
-    key: string;
+/** Add `n` whole days to an ISO "YYYY-MM-DD" date (calendar-safe, UTC math) */
+function addDays(iso: string, n: number): string {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+export type Rating = 'again' | 'hard' | 'good' | 'easy';
+export type Confidence = 'weak' | 'medium' | 'strong';
+
+/** Per-chapter spaced-repetition state (SM-2 lite). Persisted by chapter slug. */
+export interface ReviewState {
+    /** Next due date, ISO "YYYY-MM-DD" */
+    due: string;
+    /** Current gap in days between reviews */
+    interval: number;
+    /** Ease factor, 1.3..3.0 — grows on Easy, shrinks on Again/Hard */
+    ease: number;
+    /** Successful reviews so far (Again resets to 0) */
+    reps: number;
+    /** Date of the last review, ISO */
+    last: string;
+    lastRating?: Rating;
+}
+
+const SEED_EASE = 2.3;
+const MIN_EASE = 1.3;
+const MAX_EASE = 3.0;
+
+/** Implicit state for a freshly completed chapter that has never been reviewed:
+    first revision falls due the day after it was finished. */
+export function seedState(completedOn: string): ReviewState {
+    return { due: addDays(completedOn, 1), interval: 1, ease: SEED_EASE, reps: 0, last: completedOn };
+}
+
+/** Advance an SM-2 lite state by a self-rating, scheduling the next due date.
+    `today` anchors the new interval so a late review doesn't compound delay. */
+export function applyRating(state: ReviewState, rating: Rating, today: string): ReviewState {
+    let { interval, ease, reps } = state;
+    switch (rating) {
+        case 'again':
+            reps = 0; interval = 1; ease = Math.max(MIN_EASE, ease - 0.2); break;
+        case 'hard':
+            interval = Math.max(1, Math.round(interval * 1.2)); ease = Math.max(MIN_EASE, ease - 0.15); reps += 1; break;
+        case 'good':
+            // Graduating steps for the first two passes, then ease-driven
+            interval = reps === 0 ? 3 : reps === 1 ? 7 : Math.round(interval * ease);
+            reps += 1; break;
+        case 'easy':
+            interval = reps === 0 ? 5 : reps === 1 ? 10 : Math.round(interval * ease * 1.3);
+            ease = Math.min(MAX_EASE, ease + 0.15); reps += 1; break;
+    }
+    return { due: addDays(today, interval), interval, ease, reps, last: today, lastRating: rating };
+}
+
+/** The interval (days) a given rating would schedule from `state` — for showing
+    "Good · 7d" style previews on the recall buttons without mutating anything. */
+export function previewInterval(state: ReviewState, rating: Rating): number {
+    return applyRating(state, rating, state.last).interval;
+}
+
+/** Confidence inferred from how recall has gone, when none was set by hand:
+    a recent "Again" or eroded ease reads weak; steady Good/Easy reads strong. */
+export function derivedConfidence(state?: ReviewState): Confidence {
+    if (!state) return 'medium';
+    if (state.lastRating === 'again' || state.ease < 1.6) return 'weak';
+    if (state.reps >= 3 && state.ease >= SEED_EASE) return 'strong';
+    return 'medium';
+}
+
+/** Manual override wins; otherwise fall back to the derived level. */
+export function effectiveConfidence(
+    slug: string,
+    reviews: Record<string, ReviewState>,
+    confidence: Record<string, Confidence>,
+): Confidence {
+    return confidence[slug] ?? derivedConfidence(reviews[slug]);
+}
+
+export interface DueReview {
+    slug: string;
     chapter: string;
     subject: string;
     pages: string;
-    daysAgo: number;
+    completedOn: string;
+    /** Stored state, or the seeded state for a never-reviewed chapter */
+    state: ReviewState;
+    confidence: Confidence;
+    /** How many days past due (0 = due exactly today) */
+    overdueDays: number;
 }
 
-/** Spaced-repetition intervals (days after completion) */
-const INTERVALS = [1, 7, 30];
+const CONF_ORDER: Record<Confidence, number> = { weak: 0, medium: 1, strong: 2 };
 
-/** Chapters due for revision today: for each interval N, a chapter whose
-    completion is N..N+2 days ago (the +2 grace so one missed day doesn't drop
-    it). Keys already marked done are excluded. Oldest interval first, max 3. */
-export function dueRevisions(
+/** Chapters whose next review falls on or before today. Weak-confidence chapters
+    surface first, then the most overdue; capped so a backlog never floods. */
+export function dueReviews(
     plan: DayPlan[],
-    revisions: Record<string, boolean>,
+    reviews: Record<string, ReviewState>,
+    confidence: Record<string, Confidence>,
     todayStr: string,
-): DueRevision[] {
+    limit = 6,
+): DueReview[] {
     const completions = chapterCompletions(plan);
-    const due: DueRevision[] = [];
-    // largest interval (oldest material) first
-    for (const interval of [...INTERVALS].reverse()) {
-        for (const c of completions) {
-            const daysAgo = daysBetween(c.completedOn, todayStr);
-            if (daysAgo < interval || daysAgo > interval + 2) continue;
-            const key = `${interval}_${slugify(c.chapter)}_${c.completedOn}`;
-            if (revisions[key]) continue;
-            due.push({ key, chapter: c.chapter, subject: c.subject, pages: c.pages, daysAgo });
-        }
+    const due: DueReview[] = [];
+    for (const c of completions) {
+        const slug = slugify(c.chapter);
+        const state = reviews[slug] ?? seedState(c.completedOn);
+        if (state.due > todayStr) continue;
+        due.push({
+            slug, chapter: c.chapter, subject: c.subject, pages: c.pages,
+            completedOn: c.completedOn, state,
+            confidence: effectiveConfidence(slug, reviews, confidence),
+            overdueDays: daysBetween(state.due, todayStr),
+        });
     }
-    return due.slice(0, 3);
+    due.sort((a, b) =>
+        CONF_ORDER[a.confidence] - CONF_ORDER[b.confidence] ||
+        a.state.due.localeCompare(b.state.due),
+    );
+    return due.slice(0, limit);
 }

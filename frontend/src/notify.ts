@@ -38,11 +38,13 @@ export async function schedulePhaseEnd(atMs: number, title: string, body: string
     } catch { /* denied or plugin unavailable */ }
 }
 
-/** Cancel the pending phase-end notification. No-op on web. */
+/** Cancel the pending phase-end notification. No-op on web.
+    Also clears id 8802, the standing session notification a previous build
+    posted — without this, one already sitting in the tray would never leave. */
 export async function cancelPhaseEnd(): Promise<void> {
     if (!Capacitor.isNativePlatform()) return;
     try {
         const { LocalNotifications } = await import('@capacitor/local-notifications');
-        await LocalNotifications.cancel({ notifications: [{ id: PHASE_END_ID }] });
+        await LocalNotifications.cancel({ notifications: [{ id: PHASE_END_ID }, { id: 8802 }] });
     } catch { /* plugin unavailable */ }
 }

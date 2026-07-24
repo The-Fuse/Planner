@@ -440,5 +440,6 @@ struct PlannerWidget: Widget {
 struct PlannerWidgetBundle: WidgetBundle {
     var body: some Widget {
         PlannerWidget()
+        PomodoroLiveActivity()
     }
 }

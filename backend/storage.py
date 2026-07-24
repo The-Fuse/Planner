@@ -83,6 +83,22 @@ def init_db():
             )
         ''')
 
+        # Create reviews table (SM-2 review state JSON per chapter slug)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS reviews (
+                key VARCHAR(255) PRIMARY KEY,
+                state TEXT NOT NULL
+            )
+        ''')
+
+        # Create confidence table (weak|medium|strong per chapter slug)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS confidence (
+                key VARCHAR(255) PRIMARY KEY,
+                level TEXT NOT NULL
+            )
+        ''')
+
         conn.commit()
         conn.close()
 
@@ -297,6 +313,79 @@ def set_revision(key, done):
         conn.close()
     except Exception as e:
         print(f"Database error in set_revision: {e}")
+
+def load_reviews():
+    """Load all SM-2 review states ({"slug": {due, interval, ease, reps, ...}}).
+    State is stored as a JSON blob per chapter slug; a corrupt row is skipped."""
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT key, state FROM reviews')
+        rows = cursor.fetchall()
+        conn.close()
+        out = {}
+        for key, state in rows:
+            try:
+                out[key] = json.loads(state)
+            except (json.JSONDecodeError, TypeError):
+                continue
+        return out
+    except Exception as e:
+        print(f"Database error in load_reviews: {e}")
+        return {}
+
+def set_review(key, state):
+    """Upsert a chapter's review state — a plain overwrite (the client owns the
+    SM-2 progression and always posts the full, current state)."""
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        blob = json.dumps(state)
+
+        if db_type == "postgres":
+            cursor.execute('''
+                INSERT INTO reviews (key, state) VALUES (%s, %s)
+                ON CONFLICT (key) DO UPDATE SET state = EXCLUDED.state
+            ''', (key, blob))
+        else:
+            cursor.execute('INSERT OR REPLACE INTO reviews (key, state) VALUES (?, ?)', (key, blob))
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Database error in set_review: {e}")
+
+def load_confidence():
+    """Load all confidence levels ({"slug": "weak"|"medium"|"strong"})"""
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT key, level FROM confidence')
+        rows = cursor.fetchall()
+        conn.close()
+        return {key: level for key, level in rows}
+    except Exception as e:
+        print(f"Database error in load_confidence: {e}")
+        return {}
+
+def set_confidence(key, level):
+    """Upsert a chapter's confidence level — a plain overwrite."""
+    try:
+        conn, db_type = get_db_connection()
+        cursor = conn.cursor()
+
+        if db_type == "postgres":
+            cursor.execute('''
+                INSERT INTO confidence (key, level) VALUES (%s, %s)
+                ON CONFLICT (key) DO UPDATE SET level = EXCLUDED.level
+            ''', (key, level))
+        else:
+            cursor.execute('INSERT OR REPLACE INTO confidence (key, level) VALUES (?, ?)', (key, level))
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Database error in set_confidence: {e}")
 
 def get_preference(key, default=None):
     """Get a preference value by key"""

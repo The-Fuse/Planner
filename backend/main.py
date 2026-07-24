@@ -18,6 +18,8 @@ from storage import (
     load_study_time, set_study_time,
     load_task_pages, set_task_page,
     load_revisions, set_revision,
+    load_reviews, set_review,
+    load_confidence, set_confidence,
 )
 from notifier import send_daily_notification
 
@@ -28,6 +30,12 @@ ALLOWED_PREF_KEYS = {"ntfy_topic", "theme"}
 class PreferenceInput(BaseModel):
     key: str
     value: str
+
+class ReviewInput(BaseModel):
+    key: str
+    state: dict
+
+CONFIDENCE_LEVELS = {"weak", "medium", "strong"}
 
 _ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 if not _ALLOWED_ORIGINS:
@@ -172,6 +180,34 @@ def post_revision(key: str, done: bool):
     set_revision(key, done)
     return {"status": "success", "key": key, "done": done}
 
+@app.get("/api/reviews")
+def get_reviews():
+    """All SM-2 review states, keyed by chapter slug."""
+    return load_reviews()
+
+@app.post("/api/reviews")
+def post_review(review: ReviewInput):
+    """Persist a chapter's full review state after a recall rating."""
+    if not review.key or len(review.key) > 255:
+        raise HTTPException(status_code=400, detail="Invalid review key")
+    set_review(review.key, review.state)
+    return {"status": "success", "key": review.key}
+
+@app.get("/api/confidence")
+def get_confidence():
+    """All confidence levels, keyed by chapter slug."""
+    return load_confidence()
+
+@app.post("/api/confidence")
+def post_confidence(key: str, level: str):
+    """Set a chapter's confidence level (weak|medium|strong)."""
+    if not key or len(key) > 255:
+        raise HTTPException(status_code=400, detail="Invalid confidence key")
+    if level not in CONFIDENCE_LEVELS:
+        raise HTTPException(status_code=400, detail=f"level must be one of {sorted(CONFIDENCE_LEVELS)}")
+    set_confidence(key, level)
+    return {"status": "success", "key": key, "level": level}
+
 @app.get("/api/preferences/{key}")
 def get_pref_api(key: str):
     val = get_preference(key)
@@ -188,18 +224,20 @@ _PAGE_RE = re.compile(r"pp\.(\d+)-(\d+)")
 
 
 def _compute_replan_preview():
-    """Simulate a fresh plan starting tomorrow, resuming each subject past the
-    work already completed. No side effects.
+    """Simulate a fresh plan starting TODAY, folding every unread page (all
+    catch-up backlog first, then upcoming) back into the schedule. No side effects.
 
-    For every subject in the CURRENT plan we take two anchors:
-      - where the current plan starts it (min first page across its slots), and
-      - the furthest page reached across its COMPLETED slots.
-    The resume page is max(current-plan-first-page, max-completed-page + 1),
-    so a subject already fast-forwarded by RESUME_PAGES never regresses, and a
-    subject with no completed slots simply stays where the plan has it.
+    For every subject in the CURRENT plan we look at each slot's page range and
+    whether that slot is completed. The resume page is the EARLIEST unread page —
+    the min start page across the subject's INCOMPLETE slots — so no backlog is
+    ever skipped, even if a later slot was completed out of order. A subject with
+    no incomplete slots is finished, so it resumes past its furthest read page
+    (and the scheduler treats it as done). A subject with nothing completed simply
+    stays at its current plan start.
     """
-    first_page = {}     # subject -> min first page across its slots
-    max_completed = {}  # subject -> max end page across COMPLETED slots
+    first_page = {}       # subject -> min first page across its slots
+    earliest_unread = {}  # subject -> min start page across INCOMPLETE slots
+    max_completed = {}    # subject -> max end page across COMPLETED slots
 
     for day in schedule_cache:
         for slot in day['slots']:
@@ -217,20 +255,27 @@ def _compute_replan_preview():
                 mx = max(int(b) for _, b in ranges)
                 if subj not in max_completed or mx > max_completed[subj]:
                     max_completed[subj] = mx
+            else:
+                if subj not in earliest_unread or fp < earliest_unread[subj]:
+                    earliest_unread[subj] = fp
 
     resume_pages = {}
     for subj, fp in first_page.items():
-        candidate = fp
-        if subj in max_completed:
-            candidate = max(fp, max_completed[subj] + 1)
-        resume_pages[subj] = candidate
+        if subj in earliest_unread:
+            # Resume from the earliest page not yet read, so all catch-up is kept
+            resume_pages[subj] = earliest_unread[subj]
+        elif subj in max_completed:
+            # Every slot in the window is done — pick up past the furthest page
+            resume_pages[subj] = max_completed[subj] + 1
+        else:
+            resume_pages[subj] = fp
 
-    tomorrow = datetime.date.today() + datetime.timedelta(days=1)
-    sim = generate_schedule(start_date=tomorrow, resume_pages=resume_pages)
+    today = datetime.date.today()
+    sim = generate_schedule(start_date=today, resume_pages=resume_pages)
     blocks = sum(len(day['slots']) for day in sim)
     return {
-        "start": tomorrow.isoformat(),
-        "end": sim[-1]['date'] if sim else tomorrow.isoformat(),
+        "start": today.isoformat(),
+        "end": sim[-1]['date'] if sim else today.isoformat(),
         "blocks": blocks,
         "resume_pages": resume_pages,
     }
@@ -238,7 +283,7 @@ def _compute_replan_preview():
 
 @app.get("/api/replan/preview")
 def replan_preview():
-    """Preview a replan-from-tomorrow without touching anything."""
+    """Preview a replan-from-today without touching anything."""
     return _compute_replan_preview()
 
 

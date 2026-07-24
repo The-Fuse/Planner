@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1A2B3C4D5E6F708192A3B411 /* PomodoroAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B401 /* PomodoroAttributes.swift */; };
+		1A2B3C4D5E6F708192A3B412 /* PomodoroAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B401 /* PomodoroAttributes.swift */; };
+		1A2B3C4D5E6F708192A3B413 /* LiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B402 /* LiveActivityPlugin.swift */; };
+		1A2B3C4D5E6F708192A3B414 /* PomodoroLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B403 /* PomodoroLiveActivity.swift */; };
+		1A2B3C4D5E6F708192A3B415 /* PomodoroIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B404 /* PomodoroIntents.swift */; };
+		1A2B3C4D5E6F708192A3B416 /* PomodoroIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B404 /* PomodoroIntents.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		370C1956C8E9AC47980AB8F7 /* WidgetBridgePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 588D2464842F7E7035A5A6C1 /* WidgetBridgePlugin.swift */; };
 		3E916D8E1FD4C11A31C1EBB3 /* PlannerWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24698D7AB88323AFABD26D0E /* PlannerWidget.swift */; };
@@ -47,6 +53,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1A2B3C4D5E6F708192A3B401 /* PomodoroAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PomodoroAttributes.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F708192A3B402 /* LiveActivityPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityPlugin.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F708192A3B403 /* PomodoroLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PomodoroLiveActivity.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F708192A3B404 /* PomodoroIntents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PomodoroIntents.swift; sourceTree = "<group>"; };
 		24698D7AB88323AFABD26D0E /* PlannerWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlannerWidget.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		35F90EC7F9E7DF6BDF12092A /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -117,6 +127,9 @@
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
 				588D2464842F7E7035A5A6C1 /* WidgetBridgePlugin.swift */,
+				1A2B3C4D5E6F708192A3B402 /* LiveActivityPlugin.swift */,
+				1A2B3C4D5E6F708192A3B401 /* PomodoroAttributes.swift */,
+				1A2B3C4D5E6F708192A3B404 /* PomodoroIntents.swift */,
 				7F228EADEA6A4239323ADA6E /* MainViewController.swift */,
 			);
 			path = App;
@@ -126,6 +139,7 @@
 			isa = PBXGroup;
 			children = (
 				24698D7AB88323AFABD26D0E /* PlannerWidget.swift */,
+				1A2B3C4D5E6F708192A3B403 /* PomodoroLiveActivity.swift */,
 				35F90EC7F9E7DF6BDF12092A /* Info.plist */,
 			);
 			path = PlannerWidget;
@@ -257,6 +271,9 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				370C1956C8E9AC47980AB8F7 /* WidgetBridgePlugin.swift in Sources */,
+				1A2B3C4D5E6F708192A3B413 /* LiveActivityPlugin.swift in Sources */,
+				1A2B3C4D5E6F708192A3B411 /* PomodoroAttributes.swift in Sources */,
+				1A2B3C4D5E6F708192A3B415 /* PomodoroIntents.swift in Sources */,
 				F68466B4C60C8B22DA0378F1 /* MainViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -266,6 +283,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				3E916D8E1FD4C11A31C1EBB3 /* PlannerWidget.swift in Sources */,
+				1A2B3C4D5E6F708192A3B414 /* PomodoroLiveActivity.swift in Sources */,
+				1A2B3C4D5E6F708192A3B412 /* PomodoroAttributes.swift in Sources */,
+				1A2B3C4D5E6F708192A3B416 /* PomodoroIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -417,7 +437,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = SNU2Q594MQ;
+				DEVELOPMENT_TEAM = 8Z74RDXCB8;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -426,7 +446,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
-				PRODUCT_BUNDLE_IDENTIFIER = com.kr1da.planner;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kda.planner;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_VERSION = 5.0;
@@ -441,7 +461,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = SNU2Q594MQ;
+				DEVELOPMENT_TEAM = 8Z74RDXCB8;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -449,7 +469,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kr1da.planner;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kda.planner;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;
@@ -476,7 +496,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.reactjs.native.example.NativeModuleTestApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kda.planner.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -504,7 +524,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.reactjs.native.example.NativeModuleTestApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kda.planner.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;

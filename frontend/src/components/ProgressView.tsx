@@ -258,9 +258,9 @@ export function ProgressView({
     const showWeek = isSunday && pastDays.length >= 7;
 
     return (
-        <main className="max-w-[560px] mx-auto pb-16">
+        <main className="max-w-[560px] lg:max-w-[980px] mx-auto pb-16">
             <header className="sticky-glass-header bg-[#060808]/70 backdrop-blur-lg md:static md:bg-transparent md:backdrop-blur-none px-6 z-40">
-                <div className="max-w-[560px] mx-auto">
+                <div className="max-w-[560px] lg:max-w-[980px] mx-auto">
                     {prepDay > 0 && (
                         <p className="text-[13px] text-on-surface-variant/50 font-medium">
                             Day {prepDay} of preparation
@@ -273,7 +273,12 @@ export function ProgressView({
                 </div>
             </header>
 
-            <div className="px-6">
+            {/* Two-column dashboard on large screens; single column on phone
+                and narrow tablets, source order intact. Equal-height columns with
+                a centered gutter divider so the two halves read as one spread. */}
+            <div className="px-6 lg:grid lg:grid-cols-2 lg:gap-x-0 lg:items-stretch">
+              {/* Primary column — headline stats and consistency */}
+              <div className="lg:pr-10">
                 {/* ── Learned-pace nudge ── */}
                 {insight && (
                     <p className="text-[12px] text-on-surface-variant/55 mt-4 leading-snug">{insight}</p>
@@ -311,6 +316,10 @@ export function ProgressView({
                     </section>
                 )}
 
+              </div>{/* end primary column */}
+
+              {/* Secondary column — subject breakdown and recent activity */}
+              <div className="lg:pl-10 lg:border-l lg:border-white/[0.06]">
                 {/* ── Subjects ── */}
                 {subjects.length > 0 && (
                     <section className="mb-10">
@@ -378,6 +387,7 @@ export function ProgressView({
                         </div>
                     </section>
                 )}
+              </div>{/* end secondary column */}
             </div>
         </main>
     );
